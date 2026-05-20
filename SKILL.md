@@ -48,23 +48,38 @@ Write to `<repo-root>/CLAUDE.md`. **Refuse to overwrite** if the file already ex
 
 ### 5. Write subtree `CLAUDE.md` files
 
-Before writing, read `references/subtree-toolchains.md` in this skill's folder. It has per-language entries for tools, test framework, and verification-workflow applicability — the catalog you'll fill the templates from.
-
 For each subtree path from step 3:
 
-1. **Identify the stack** — language and major frameworks. Look in `docs/ARCHITECTURE.md` for descriptions, and at the subtree's package manifest if there is one (`package.json`, `*.csproj`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`) for actually-installed tools. The manifest beats the catalog default if they disagree.
+1. **Identify the stack** — language and major frameworks for this subtree. Look in `docs/ARCHITECTURE.md` for descriptions, and at the subtree's package manifest if there is one (`package.json`, `*.csproj`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`).
+
 2. **Read `templates/CLAUDE-subtree.md`** in this skill's folder.
-3. **Fill the placeholders from the catalog:**
-   - **Required tools** — at minimum, `LSP` for the stack's language. Add browser tools (Playwright MCP) for UI subtrees. Quote the load instructions if the tool is deferred.
-   - **Testing** — the catalog's default for the stack, refined by what the manifest actually shows. Keep the "do not introduce a different test framework without updating the architecture doc" closing line — it's a forcing rule, not boilerplate.
-   - **Other rules** — include the verification workflow (the catalog's 4-step Playwright MCP pattern) for UI subtrees; skip it for backend/library subtrees where the test suite is the verification.
-4. **"Required skills" is special** — these are project-specific, and you must not invent skill names. If the catalog's "Common skills to mandate" section identifies a pattern that matches this project (design system, security-sensitive subtree, UI quality), surface it as a placeholder pointing at the right skill kind; otherwise leave that slot's placeholder visible so the user knows it's an open question. The user can build domain skills with `/skill-creator` later and add the mandate then.
+
+3. **Fill the easy slots directly from the project:**
+   - **Required tools** — at minimum, `LSP` for the subtree's primary language. Add browser tools (Playwright MCP) for UI subtrees. Quote the load instructions if the tool is deferred.
+   - **Testing** — read the actual test framework from the package manifest (Vitest / Jest / xUnit / pytest / etc.) and pin it. Keep the "do not introduce a different test framework without updating the architecture doc" closing line — it's a forcing rule, not boilerplate.
+   - **Verification workflow** — include the 4-step Playwright MCP pattern (already in the template's catch-all section) for UI subtrees; skip it for backend/library subtrees where the test suite is the verification.
+
+4. **Fill "Required skills" via the dynamic suggestion flow:**
+
+   a. **Read the opinionated catalog** at `references/subtree-skills.md` in this skill's folder. It lists catalog items (skills, plugins, tools) with "when to mandate" hints.
+
+   b. **Inspect what's actually installed** in the current Claude Code environment:
+      - Parse the `available skills` block in the system context (it's there as a system-reminder during a session). Plugin-namespaced entries follow `plugin-name:skill-name`.
+      - Deferred tools are discoverable via `ToolSearch` queries.
+      - Optionally inspect `~/.claude/plugins/` or `.claude/plugins/` for plugin manifests.
+
+   c. **Build a candidate list per subtree** by combining:
+      - Catalog items whose "When to mandate" matches the subtree's nature.
+      - Installed items not in the catalog that look clearly relevant (e.g., a `*-design-system` skill for a frontend subtree).
+
+   d. **Ask the user, once per subtree:**
+      > For `<subtree-path>`, suggested: `A` (installed), `B` (installed), `C` (install required from plugin `<x>`). Pick which to include — reply `all`, `none`, or list a subset.
+
+   e. **Write the user's chosen items** into the Required skills section of that subtree's CLAUDE.md. Zero items is a valid answer — leave the section empty if the user picks `none`. Do not invent skill names that aren't installed and aren't in the catalog.
 
 If the subtree directory doesn't exist yet, create it.
 
 Same overwrite rule: if `<subtree>/CLAUDE.md` exists, do not overwrite; show a diff and ask.
-
-These are suggestions, not commandments. When you print the next-steps summary (step 7), explicitly tell the user the subtree files were filled from the catalog and need a skim + adjust pass.
 
 ### 6. Seed `docs/CHANGELOG.md`
 
@@ -87,7 +102,7 @@ Print a short summary listing:
 
 - Files created / files left alone (with paths).
 - Three reminders:
-  - **Subtree CLAUDE.md files have suggested tools, test framework, and verification workflow** filled in from the toolchain catalog. Skim and adjust — the catalog is a starting point, not the truth about your specific stack.
+  - **Subtree CLAUDE.md tools, test framework, and verification workflow** were filled in from the project (package manifest + architecture). Required skills reflect the choices you made per subtree in step 5 — anything you didn't pick was left out. Skim and adjust.
   - The `simplify` skill is already globally available — root CLAUDE.md already mandates it after non-trivial edits, so nothing to install.
   - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
 
