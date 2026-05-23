@@ -103,7 +103,7 @@ Print a short summary listing:
 - Files created / files left alone (with paths).
 - Three reminders:
   - **Subtree CLAUDE.md tools, test framework, and verification workflow** were filled in from the project (package manifest + architecture). Required skills reflect the choices you made per subtree in step 5 — anything you didn't pick was left out. Skim and adjust.
-  - The `simplify` skill is already globally available — root CLAUDE.md already mandates it after non-trivial edits, so nothing to install.
+  - The `code-review` skill is already globally available — root CLAUDE.md already mandates it (invoked with the `high` argument) after non-trivial edits, so nothing to install.
   - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
 
 Stop. Do not start building domain skills or expanding the docs — those are separate decisions for the user.

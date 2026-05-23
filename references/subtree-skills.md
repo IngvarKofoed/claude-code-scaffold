@@ -13,7 +13,7 @@ A short, opinionated catalog of Claude Code ecosystem items the `scaffold` skill
 Two things explicitly *not* covered here, because the scaffold skill picks them from elsewhere:
 
 - **Language servers from the package manifest** — picked by reading `package.json` / `*.csproj` / etc.
-- **The `simplify` skill** — mandated globally from root CLAUDE.md, never per-subtree.
+- **The `code-review` skill** — mandated globally from root CLAUDE.md (invoked with the `high` argument), never per-subtree.
 
 ## How the skill uses the catalog
 
@@ -57,7 +57,7 @@ Two things explicitly *not* covered here, because the scaffold skill picks them 
 
 ## When zero items is the right answer
 
-Many subtrees genuinely don't need anything beyond the global `simplify` mandate:
+Many subtrees genuinely don't need anything beyond the global `code-review` mandate:
 
 - Library packages with thorough unit tests.
 - Pure backend subtrees with no security-sensitive surface.

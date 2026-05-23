@@ -31,7 +31,7 @@ Each `src/` subtree (or service / package / area) has its own `CLAUDE.md` with s
 
 ## After making changes
 
-Invoke the **`simplify`** skill after a non-trivial edit to review the touched code for reuse, clarity, and efficiency. It does not auto-trigger — you must invoke it explicitly.
+Invoke the **`code-review`** skill with the `high` argument after a non-trivial edit to review the touched code for correctness, reuse, clarity, and efficiency. It does not auto-trigger — you must invoke it explicitly.
 
 <!-- Add additional sections below as the project develops:
   - Project-specific forcing rules (e.g., "Check in with the user before making CSS / layout / UX changes")
