@@ -31,7 +31,15 @@ Each `src/` subtree (or service / package / area) has its own `CLAUDE.md` with s
 
 ## After making changes
 
-Invoke the **`code-review`** skill with the `high` argument after a non-trivial edit to review the touched code for correctness, reuse, clarity, and efficiency. It does not auto-trigger — you must invoke it explicitly.
+After a non-trivial edit, invoke the **`code-review`** skill with the `high` argument to review the touched code for correctness, reuse, clarity, and efficiency. It does not auto-trigger — you must invoke it explicitly.
+
+Once the review returns, do not start fixing findings immediately. Instead:
+
+1. **Group findings by severity** — blockers (correctness bugs, data loss, security), should-fix (clear improvements, missed reuse), nits (style, naming, minor clarity).
+2. **Summarize each bucket in one line** so the user can see what's in it without expanding every finding.
+3. **Ask the user which to fix** via `AskUserQuestion` with `multiSelect: true`. Options are the severity buckets ("Blockers (N)", "Should-fix (N)", "Nits (N)"), plus a "None — leave as is" option. Skip buckets that are empty.
+4. If a single bucket has more findings than fit cleanly into one label, list each finding as its own option (up to 4 per question; chunk into follow-up questions if more).
+5. Apply only the selected fixes. Re-run `code-review` only if the user asks.
 
 <!-- Add additional sections below as the project develops:
   - Project-specific forcing rules (e.g., "Check in with the user before making CSS / layout / UX changes")
