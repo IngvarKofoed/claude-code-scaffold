@@ -1,6 +1,6 @@
 ---
 name: scaffold
-description: "Bootstrap a repository's CLAUDE.md scaffolding once `docs/CONCEPT.md` and `docs/ARCHITECTURE.md` already exist. Use this skill when the user says any of: 'scaffold this repo', 'set up CLAUDE.md', 'bootstrap this repo for Claude', 'initialize the agent scaffolding', 'create the CLAUDE.md files', 'wire up the CLAUDE.md', or any phrasing that implies a fresh repo needs its CLAUDE.md files written now that the anchoring docs are done. Also triggers on 'I've written my CONCEPT and ARCHITECTURE, now what?' or 'create root and subtree CLAUDE.md'. Writes root + per-subtree CLAUDE.md from templates in this skill's folder, seeds an empty `docs/CHANGELOG.md`, prints next steps. Refuses to overwrite existing CLAUDE.md files — shows a diff and asks instead."
+description: "Bootstrap a repository's CLAUDE.md scaffolding once `docs/CONCEPT.md` and `docs/ARCHITECTURE.md` already exist. Use this skill when the user says any of: 'scaffold this repo', 'set up CLAUDE.md', 'bootstrap this repo for Claude', 'initialize the agent scaffolding', 'create the CLAUDE.md files', 'wire up the CLAUDE.md', or any phrasing that implies a fresh repo needs its CLAUDE.md files written now that the anchoring docs are done. Also triggers on 'I've written my CONCEPT and ARCHITECTURE, now what?' or 'create root and subtree CLAUDE.md'. Writes root + per-subtree CLAUDE.md from templates in this skill's folder, seeds an empty `docs/CHANGELOG.md`, optionally wires git-describe app versioning, prints next steps. Refuses to overwrite existing CLAUDE.md files — shows a diff and asks instead."
 ---
 
 # scaffold
@@ -96,7 +96,23 @@ The full discipline rule lives in root CLAUDE.md (step 4 wrote it). The file its
 
 If `docs/CHANGELOG.md` already exists, leave it alone.
 
-### 7. Print next steps
+### 7. Offer git-describe app versioning (optional)
+
+Ask the user whether to wire up git-derived versioning before doing anything here — skip it entirely if they decline. It only pays off for a deployed app with a build/CI pipeline.
+
+The scheme: version the app from git, not a hand-bumped number. One annotated tag (`v0.1.0`) plus `git describe --tags --always --dirty` (e.g. `v0.1.0-32-g98af7ae`) is the version everywhere. New releases are just new annotated tags — no code change.
+
+If the user opts in, set up the single resolution rule and let it flow through whatever build path the repo already has:
+
+1. **Resolution helper** — wherever the app reports its version, resolve it with one rule: return `APP_VERSION` if that env var is set, else shell out to `git describe --tags --always --dirty`, else fall back to `"unknown"` on error. (`--always` degrades to a bare short hash when there's no tag; `--dirty` flags uncommitted local builds.)
+
+2. **Docker** (if there's a `Dockerfile`) — declare `ARG VERSION=unknown`, set `ENV APP_VERSION=$VERSION` in every stage that builds or runs the app, and add `.git` to `.dockerignore`. The image can't run `git describe` (no `.git`, no git binary), so the build-arg is the only way the version gets in. Document the build line in a header comment: `docker build --build-arg VERSION=$(git describe --tags --always --dirty) .`
+
+3. **CI** (if there's a pipeline config) — resolve `git describe` on the host (ensure tags are fetched) and pass it through as `--build-arg VERSION=...`.
+
+4. **First tag** — if the repo has no tags yet, create the initial annotated one: `git tag -a v0.1.0 -m "Initial release marker"`.
+
+### 8. Print next steps
 
 Print a short summary listing:
 
@@ -116,6 +132,6 @@ Stop. Do not start building domain skills or expanding the docs — those are se
 
 ## Scope
 
-**In scope:** writing CLAUDE.md scaffolding, seeding `docs/CHANGELOG.md`.
+**In scope:** writing CLAUDE.md scaffolding, seeding `docs/CHANGELOG.md`, optionally wiring git-describe app versioning (step 7, only if the user opts in).
 
 **Out of scope:** creating CONCEPT or ARCHITECTURE (the user does this), building domain skills (use `/skill-creator`), configuring hooks (use `update-config`), writing to user-side memory (per-user, not repo-side).
