@@ -2,13 +2,13 @@
 
 Per-ecosystem recipes for the optional git-describe versioning step (SKILL.md step 7). Read only the section that matches the stack — per-subtree if a repo mixes stacks (e.g. a .NET backend and a Vite frontend each get their own treatment).
 
-**The contract every recipe implements.** The version is `git describe --tags --always --dirty` (e.g. `v0.1.0-32-g98af7ae`), resolved **at build time** and baked into the artifact, because a deployed container/binary/bundle has no `.git`. Wherever the app reports its version, resolve it in this order: (1) the baked-in value, (2) `git describe` as a dev-checkout fallback, (3) `"unknown"`. Pick the *idiomatic* baking mechanism below rather than bolting a runtime `git describe` onto a stack that already has one.
+**The contract every recipe implements.** The version is `git describe --tags --long --always --dirty` (e.g. `v0.1.0-32-g98af7ae`), resolved **once at build time, inside the checkout, and baked into the artifact** — exactly how MinVer, setuptools_scm, and Nerdbank.GitVersioning work. The running app **never shells out to git and never needs `.git`**; it only reads the value the build baked in — a stamped assembly/manifest, a generated version module, or an env var — falling back to `"unknown"` only when the bake step never ran. `git describe` runs in exactly one place: the build step (always inside the checkout, in CI and locally alike). Pick the *idiomatic* baking mechanism below; never make the running app resolve git itself.
 
-**The pitfall that bites every stack: shallow CI clones.** CI checkouts default to depth-1 with no tags, so `git describe --tags` silently degrades to a bare hash and builds lose their real version. Fix it once at checkout — GitHub Actions `actions/checkout` with `fetch-depth: 0`, GitLab `GIT_DEPTH: 0`, Azure `fetchDepth: 0`, or `git fetch --tags --unshallow` before the build. Use **annotated** tags (`git tag -a v0.1.0 -m ...`); `git describe` without `--tags` only sees annotated ones. Package/plugin versions below are representative of late-2025/2026 — check for a newer one when you wire it.
+**The pitfall that bites every stack: shallow CI clones.** CI checkouts default to depth-1 with no tags, so `git describe --tags` silently degrades to a bare hash and builds lose their real version. Fix it once at checkout — GitHub Actions `actions/checkout` with `fetch-depth: 0`, GitLab `GIT_DEPTH: 0`, Azure `fetchDepth: 0`, or `git fetch --tags --unshallow` before the build. Use **annotated** tags (`git tag -a v0.1.0 -m ...`); `git describe` without `--tags` only sees annotated ones. **`--long`** forces the full `v0.1.0-0-g<sha>` form even when HEAD sits exactly on a tag — without it an exact tag prints just `v0.1.0` with no SHA, so release builds lose the commit reference; keep it on the raw `git describe` recipes below (the tool-driven ones — MinVer, setuptools_scm — carry the SHA their own way). Package/plugin versions below are representative of late-2025/2026 — check for a newer one when you wire it.
 
 ## Contents
 
-- [Node.js / TypeScript](#nodejs--typescript) — backend, frontend bundlers, `package.json` reconciliation
+- [Node.js / TypeScript](#nodejs--typescript) — bake step, runtime read (backend + frontend), `package.json` reconciliation
 - [.NET / C#](#net--c) — MinVer, plain MSBuild
 - [Python](#python) — setuptools_scm / hatch-vcs, standalone apps
 - [Go](#go)
@@ -20,88 +20,66 @@ Per-ecosystem recipes for the optional git-describe versioning step (SKILL.md st
 
 ## Node.js / TypeScript
 
-### Backend / Node service
+Node has no build-tool that bakes the version for you (the way MinVer or setuptools_scm do), so wire it yourself: **one prebuild script resolves git once and writes a generated module; backend and frontend both import that module.** The running app never calls git.
 
-**Idiom:** env-first, dev git fallback, resolved once at module load (never per request).
+### The bake step (one script, cross-platform)
 
-```ts
-// version.ts
+```js
+// scripts/gen-version.mjs — resolves git ONCE, at build, inside the checkout
 import { execSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 
-function fromGit(): string | undefined {
-  // Dev-checkout convenience only — a container has no .git/git, so this
-  // throws and we fall through to "unknown". Never the prod source of truth.
-  try {
-    return execSync("git describe --tags --always --dirty", {
-      stdio: ["ignore", "pipe", "ignore"],
-    }).toString().trim();
-  } catch {
-    return undefined;
-  }
-}
+const version =
+  process.env.APP_VERSION ??                  // CI / container build can pass it in directly
+  (() => { try {
+    return execSync("git describe --tags --long --always --dirty").toString().trim();
+  } catch { return "0.0.0-unknown"; } })();    // building outside a checkout
 
-export const APP_VERSION = process.env.APP_VERSION ?? fromGit() ?? "unknown";
+writeFileSync(
+  "src/version.ts",
+  `// generated by scripts/gen-version.mjs — do not edit\nexport const APP_VERSION = ${JSON.stringify(version)};\n`,
+);
 ```
 
-In production, `APP_VERSION` is set at build/deploy time (Docker build-arg → `ENV`, or the build script below) and wins. Surface it on whatever metadata endpoint already exists (`/healthz` → `{ version: APP_VERSION }`).
+```json
+{ "scripts": {
+  "prebuild": "node scripts/gen-version.mjs",
+  "predev":   "node scripts/gen-version.mjs",
+  "build": "vite build",
+  "dev":   "vite"
+} }
+```
+
+`prebuild`/`predev` run automatically before npm's `build`/`dev` (lifecycle hooks), so the module is fresh for both shipped artifacts and local runs. This is the only place git is touched, and CI/containers can skip git entirely by passing `APP_VERSION`. Add `src/version.ts` to `.gitignore`. Avoid inline `APP_VERSION=$(git describe …) vite build` — `$(...)` breaks on Windows `cmd` and `cross-env` doesn't do command substitution; the script is portable.
+
+### Runtime read — just import the baked module
+
+```ts
+import { APP_VERSION } from "./version";
+app.get("/healthz", (_req, res) => res.json({ version: APP_VERSION }));
+```
+
+The same import works in the browser: because it's a plain constant, the bundler inlines it — **no `define`, no `process.env`, no git.** Use a bundler define only when you can't import (e.g. you need it in `index.html`); feed it from the same resolved value, never from a runtime lookup:
+
+```ts
+// Vite — vite.config.ts: import { APP_VERSION } from "./src/version" then
+define: { __APP_VERSION__: JSON.stringify(APP_VERSION) }   // declare const __APP_VERSION__: string in a .d.ts
+// webpack/Rspack: new DefinePlugin({ __APP_VERSION__: JSON.stringify(APP_VERSION) })
+// Next.js — next.config.js: env: { NEXT_PUBLIC_APP_VERSION: APP_VERSION }  (inlined at build)
+```
 
 ### `package.json` version reconciliation
 
 There are two versions: npm's `version` field (strict semver, read by the registry/tooling) and the precise `git describe` string (not valid semver — has the `v` prefix and `-g<sha>` suffix). Keep them separate:
 
 - Leave `package.json` `"version"` as the **coarse release marker** (`0.1.0`), bumped to match the tag at release time. It stays valid semver.
-- Inject the **precise** value via `APP_VERSION` / a bundler define at build — that's what the running app reports.
-- Don't write the git-describe string back into `package.json` `version`; it breaks `npm publish`/`npm version`. (`process.env.npm_package_version` only exists when launched via an npm script — fine as a dev fallback, not a prod substitute.)
-
-### Build-time injection (cross-platform)
-
-Inline shell substitution (`APP_VERSION=$(git describe …) vite build`) works on macOS/Linux but **breaks on Windows `cmd`** (no `$(...)`), and `cross-env` doesn't do command substitution. The portable pattern is a tiny prebuild script that writes a committed-out artifact:
-
-```js
-// scripts/gen-version.mjs
-import { execSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
-
-const version =
-  process.env.APP_VERSION ??
-  (() => { try {
-    return execSync("git describe --tags --always --dirty").toString().trim();
-  } catch { return "unknown"; } })();
-
-writeFileSync("src/version.ts", `export const APP_VERSION = ${JSON.stringify(version)};\n`);
-```
-
-```json
-{ "scripts": { "prebuild": "node scripts/gen-version.mjs", "build": "vite build" } }
-```
-
-`prebuild` runs automatically before `build` (npm lifecycle), no shell-portability issue, and freezes the value into the bundle/image. In CI, set `APP_VERSION` once and the script passes it through. Add the generated file to `.gitignore`.
-
-### Frontend bundlers
-
-Browsers have **no `process.env` and no git** — the value must be statically substituted at build. Wrap it in `JSON.stringify` so it lands as a quoted literal.
-
-```ts
-// Vite — vite.config.ts
-define: { __APP_VERSION__: JSON.stringify(process.env.APP_VERSION) }
-// or set VITE_APP_VERSION in the build env and read import.meta.env.VITE_APP_VERSION
-
-// esbuild
-define: { __APP_VERSION__: JSON.stringify(process.env.APP_VERSION) }
-
-// webpack / Rspack
-new webpack.DefinePlugin({ __APP_VERSION__: JSON.stringify(process.env.APP_VERSION) })
-
-// Next.js — next.config.js (inlines NEXT_PUBLIC_* at build)
-module.exports = { env: { NEXT_PUBLIC_APP_VERSION: process.env.APP_VERSION } };
-// read: process.env.NEXT_PUBLIC_APP_VERSION
-```
-
-Declare the `define` token for TypeScript (`declare const __APP_VERSION__: string;` in a `.d.ts`). Never read bare `process.env.APP_VERSION` in client code — it only works when the bundler inlines it; touching un-inlined `process.env` throws at runtime.
+- The generated module carries the **precise** value — that's what the running app reports.
+- Don't write the git-describe string back into `package.json` `version`; it breaks `npm publish`/`npm version`. (`process.env.npm_package_version` only exists when launched via an npm script — not a substitute for the baked module.)
 
 ### Pitfalls
 
-- Shallow CI clones (see top). `--always` masks a missing tag as a bare hash — assert the CI output contains your tag.
+- Shallow CI clones at build time (see top). `--always` masks a missing tag as a bare hash — assert the build output contains your tag.
+- The bake must run before the app starts. `prebuild`/`predev` cover npm's `build`/`dev`; for a bundler-only dev server with no npm script, regenerate in a tiny config plugin instead. If it never runs you get `0.0.0-unknown` — a signal the build step was skipped, not a runtime git dependency.
 - Monorepo: one repo-wide tag describes the whole tree. For per-package versions use path-scoped tags + `git describe --tags --match 'pkgA-v*'`, or pass each package its own `APP_VERSION`.
 
 ---
@@ -147,7 +125,7 @@ string version =
 For teams who won't take a build dependency — CI computes the version and passes it in:
 
 ```bash
-VERSION=$(git describe --tags --always --dirty | sed 's/^v//')
+VERSION=$(git describe --tags --long --always --dirty | sed 's/^v//')
 dotnet publish -c Release -p:Version="$VERSION" -p:InformationalVersion="$VERSION"
 ```
 
@@ -215,7 +193,7 @@ except PackageNotFoundError:
 
 ### Standalone apps (never installed)
 
-- **Simplest:** compute `git describe --tags --always --dirty` in CI/Dockerfile, inject as `APP_VERSION`, read `os.environ.get("APP_VERSION", "dev")` at startup. No build backend needed.
+- **Simplest:** compute `git describe --tags --long --always --dirty` in CI/Dockerfile, inject as `APP_VERSION`, read `os.environ.get("APP_VERSION", "dev")` at startup. No build backend needed.
 - Or generate `_version.py` at build (not committed — avoids stale values) and import it.
 
 ### Pitfalls
@@ -236,7 +214,7 @@ var version = "unknown"
 ```
 
 ```sh
-go build -ldflags "-X 'main.version=$(git describe --tags --always --dirty)'" -o app .
+go build -ldflags "-X 'main.version=$(git describe --tags --long --always --dirty)'" -o app .
 ```
 
 Quote the whole `-X` token (`-X 'main.version=...'`). The target is `importpath.VarName` — for `package main` that's `main.version`; the var must be a non-const `string`. Verify it took with `go version -m app` (a wrong import path silently no-ops).
@@ -254,7 +232,7 @@ Quote the whole `-X` token (`-X 'main.version=...'`). The target is `importpath.
 use std::process::Command;
 fn main() {
     let v = Command::new("git")
-        .args(["describe", "--tags", "--always", "--dirty"])
+        .args(["describe", "--tags", "--long", "--always", "--dirty"])
         .output().ok().filter(|o| o.status.success())
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .unwrap_or_else(|| "unknown".into());
@@ -334,7 +312,7 @@ LABEL org.opencontainers.image.version="$VERSION"
 ```
 
 ```sh
-docker build --build-arg VERSION="$(git describe --tags --always --dirty)" -t myapp .
+docker build --build-arg VERSION="$(git describe --tags --long --always --dirty)" -t myapp .
 ```
 
 Document that build line in a header comment so nobody builds without it.
