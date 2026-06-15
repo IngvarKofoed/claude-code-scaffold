@@ -54,5 +54,9 @@ git commit -m "Bump scaffold skill"
 - `SKILL.md` — the workflow Claude follows.
 - `templates/CLAUDE-root.md` — starter template for the repo-root `CLAUDE.md`.
 - `templates/CLAUDE-subtree.md` — starter template for per-subtree `CLAUDE.md`.
+- `references/subtree-skills.md` — opinionated catalog of skills/plugins/tools to mandate per subtree.
+- `references/app-versioning.md` — per-ecosystem git-describe versioning recipes for the optional versioning step (Node.js, .NET, Python, Go, Rust, JVM, containers).
 
 Both templates carry placeholders (`<like this>`) you fill in during the scaffold run.
+
+The scaffold run also, optionally, offers to wire git-derived app versioning (`git describe` baked in at build time) — skipped unless you opt in.

@@ -98,19 +98,21 @@ If `docs/CHANGELOG.md` already exists, leave it alone.
 
 ### 7. Offer git-describe app versioning (optional)
 
-Ask the user whether to wire up git-derived versioning before doing anything here — skip it entirely if they decline. It only pays off for a deployed app with a build/CI pipeline.
+Ask first; skip entirely if the user declines. This only pays off for a **deployed application** with a build/CI pipeline — a library, a one-off script, or a repo with no build step doesn't need it.
 
-The scheme: version the app from git, not a hand-bumped number. One annotated tag (`v0.1.0`) plus `git describe --tags --always --dirty` (e.g. `v0.1.0-32-g98af7ae`) is the version everywhere. New releases are just new annotated tags — no code change.
+**The scheme.** Version the app from git, not a hand-bumped number. One annotated tag (`v0.1.0`) plus `git describe --tags --always --dirty` (e.g. `v0.1.0-32-g98af7ae`) is the version. New releases are just new annotated tags — no code change. (`--always` degrades to a bare short hash when there's no tag; `--dirty` flags uncommitted local builds.)
 
-If the user opts in, set up the single resolution rule and let it flow through whatever build path the repo already has:
+**The mental model that makes it work.** A deployed artifact — a container, a published binary, a built frontend bundle — has no `.git` and no git binary. So the version must be **resolved at build time and baked into the artifact**; resolving `git describe` at *runtime* only ever works in a dev checkout. Every ecosystem's idiom is a variation on "compute it at build, inject it in" — treat runtime `git describe` as a dev convenience, never the production source of truth.
 
-1. **Resolution helper** — wherever the app reports its version, resolve it with one rule: return `APP_VERSION` if that env var is set, else shell out to `git describe --tags --always --dirty`, else fall back to `"unknown"` on error. (`--always` degrades to a bare short hash when there's no tag; `--dirty` flags uncommitted local builds.)
+**The universal runtime contract.** Wherever the app reports its version, resolve it in this order: (1) the baked-in value (env var `APP_VERSION`, a generated version file, or a stamped assembly/manifest — whatever the ecosystem bakes in), (2) `git describe` as a dev-checkout fallback, (3) `"unknown"`. This one rule reads correctly in prod (1 wins) and in a dev tree (2 wins).
 
-2. **Docker** (if there's a `Dockerfile`) — declare `ARG VERSION=unknown`, set `ENV APP_VERSION=$VERSION` in every stage that builds or runs the app, and add `.git` to `.dockerignore`. The image can't run `git describe` (no `.git`, no git binary), so the build-arg is the only way the version gets in. Document the build line in a header comment: `docker build --build-arg VERSION=$(git describe --tags --always --dirty) .`
+If the user opts in:
 
-3. **CI** (if there's a pipeline config) — resolve `git describe` on the host (ensure tags are fetched) and pass it through as `--build-arg VERSION=...`.
+1. **First tag** — if the repo has no tags yet, create the initial annotated one: `git tag -a v0.1.0 -m "Initial release marker"`. `git describe` needs at least one tag (or `--always`) to produce anything.
 
-4. **First tag** — if the repo has no tags yet, create the initial annotated one: `git tag -a v0.1.0 -m "Initial release marker"`.
+2. **Wire the ecosystem idiom.** Detect the stack — per subtree if they differ — and read the matching section of `references/app-versioning.md` in this skill's folder. It has copy-pasteable build-time-inject + runtime-read recipes for Node.js (backend & frontend), .NET, Python, Go, Rust, JVM, and containers. Apply the idiomatic mechanism (.NET MinVer, Python setuptools_scm, Go `-ldflags`, frontend bundler `define`, …) rather than bolting a generic runtime `git describe` onto a stack that already has a first-class one.
+
+3. **The CI gotcha that bites every stack** — CI checkouts default to a shallow clone with no tags, so `git describe --tags` silently degrades to a bare hash and builds lose their version. Whatever the pipeline, make the checkout fetch full history and tags (GitHub Actions: `fetch-depth: 0`; otherwise `git fetch --tags --unshallow`). Flag this in any build config you touch.
 
 ### 8. Print next steps
 
@@ -132,6 +134,6 @@ Stop. Do not start building domain skills or expanding the docs — those are se
 
 ## Scope
 
-**In scope:** writing CLAUDE.md scaffolding, seeding `docs/CHANGELOG.md`, optionally wiring git-describe app versioning (step 7, only if the user opts in).
+**In scope:** writing CLAUDE.md scaffolding, seeding `docs/CHANGELOG.md`, optionally wiring git-describe app versioning (step 7, only if the user opts in — per-ecosystem recipes live in `references/app-versioning.md`).
 
 **Out of scope:** creating CONCEPT or ARCHITECTURE (the user does this), building domain skills (use `/skill-creator`), configuring hooks (use `update-config`), writing to user-side memory (per-user, not repo-side).
