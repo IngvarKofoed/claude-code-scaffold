@@ -1,11 +1,17 @@
 ---
 name: scaffold
-description: "Bootstrap a repository's CLAUDE.md scaffolding once `docs/CONCEPT.md` and `docs/ARCHITECTURE.md` already exist. Use this skill when the user says any of: 'scaffold this repo', 'set up CLAUDE.md', 'bootstrap this repo for Claude', 'initialize the agent scaffolding', 'create the CLAUDE.md files', 'wire up the CLAUDE.md', or any phrasing that implies a fresh repo needs its CLAUDE.md files written now that the anchoring docs are done. Also triggers on 'I've written my CONCEPT and ARCHITECTURE, now what?' or 'create root and subtree CLAUDE.md'. Writes root + per-subtree CLAUDE.md from templates in this skill's folder, seeds an empty `docs/CHANGELOG.md`, optionally wires git-describe app versioning, prints next steps. Refuses to overwrite existing CLAUDE.md files — shows a diff and asks instead."
+description: "Bootstrap a repository's CLAUDE.md scaffolding once `docs/CONCEPT.md` and `docs/ARCHITECTURE.md` already exist. Use this skill when the user says any of: 'scaffold this repo', 'set up CLAUDE.md', 'bootstrap this repo for Claude', 'initialize the agent scaffolding', 'create the CLAUDE.md files', 'wire up the CLAUDE.md', or any phrasing that implies a fresh repo needs its CLAUDE.md files written now that the anchoring docs are done. Also triggers on 'I've written my CONCEPT and ARCHITECTURE, now what?' or 'create root and subtree CLAUDE.md'. Writes root + per-subtree CLAUDE.md from templates in this skill's folder, seeds an empty `docs/CHANGELOG.md`, optionally wires git-describe app versioning, prints next steps. When CLAUDE.md files already exist it never overwrites blind: it audits each one against this skill's current recommendations, reports per file what's missing or outdated (e.g. an old code-review mandate, a changelog section without the numbering rule), and asks which files to bring up to date — applying only surgical, additive updates that preserve project-specific content. So also trigger this skill on 'audit my CLAUDE.md', 'are my CLAUDE.md files up to date', 'check my CLAUDE.md against the latest recommendations / scaffold conventions', or 'update CLAUDE.md to the current conventions'."
 ---
 
 # scaffold
 
-Short bootstrap helper. Run once on a repo that already has `docs/CONCEPT.md` and `docs/ARCHITECTURE.md`. Writes the minimal CLAUDE.md scaffolding — root + per-subtree — and seeds the changelog. Stops there. Domain skills, memory, hooks are out of scope.
+Short bootstrap helper. Run on a repo that already has `docs/CONCEPT.md` and `docs/ARCHITECTURE.md`. Writes the minimal CLAUDE.md scaffolding — root + per-subtree — and seeds the changelog. Stops there. Domain skills, memory, hooks are out of scope.
+
+Works in two modes per target file, decided automatically:
+- **Scaffold** — the `CLAUDE.md` doesn't exist yet → write it from the template (steps 4–5).
+- **Audit** — the `CLAUDE.md` already exists → never overwrite it blind; check it against this skill's current recommendations and offer surgical updates (step 6).
+
+A single run can do both: e.g. audit an existing root `CLAUDE.md` while scaffolding the subtree files that don't exist yet.
 
 ## Workflow
 
@@ -36,19 +42,27 @@ If ARCHITECTURE doesn't name subtrees, fall back to asking the user directly in 
 
 A subtree warrants its own CLAUDE.md when the rules genuinely differ — different language, different tools, different test framework. A small single-language project may have none; that's fine, skip step 5 in that case.
 
-### 4. Write root `CLAUDE.md`
+### 4. Partition target files, then write the ones that don't exist
+
+The target `CLAUDE.md` paths are the repo root plus each subtree from step 3. Split them in two:
+
+- **Doesn't exist yet** → scaffold from the template (this step for root, step 5 for subtrees).
+- **Already exists** → do **not** write here. Set it aside for the audit pass (step 6), which runs after the scaffold writes. Collecting all existing files first means the audit can present one consolidated "which to update" prompt instead of interrupting per file.
+
+For the root `CLAUDE.md`, if it doesn't exist:
 
 Read the template at `templates/CLAUDE-root.md` in this skill's folder.
 
 Fill placeholders:
 - **Project name** — read it from `package.json`, `pyproject.toml`, `*.csproj`, `Cargo.toml`, or ask the user.
 - **Nested guidance pointers** — replace the example lines with the actual subtree paths from step 3, each with a one-line scope description (ask the user for the scope line if you can't infer it).
+- **Git workflow** — ask the user one question: should the agent commit directly to `main`, or branch and open a PR per change? This can't be inferred reliably, so always ask. Keep the matching mode in the Git workflow section and delete the other. If they pick branches, also capture the branch-naming convention and whether `main` is protected; if direct-to-`main`, capture the push policy. (This overrides the agent's generic default of "branch first, commit only when asked," so it's worth pinning explicitly.)
 
-Write to `<repo-root>/CLAUDE.md`. **Refuse to overwrite** if the file already exists. Instead, show the user a diff against the template and ask how to proceed.
+Write to `<repo-root>/CLAUDE.md`.
 
 ### 5. Write subtree `CLAUDE.md` files
 
-For each subtree path from step 3:
+For each subtree path from step 3 **whose `CLAUDE.md` doesn't exist yet** (existing ones were set aside in step 4 for the audit in step 6):
 
 1. **Identify the stack** — language and major frameworks for this subtree. Look in `docs/ARCHITECTURE.md` for descriptions, and at the subtree's package manifest if there is one (`package.json`, `*.csproj`, `pyproject.toml`, `go.mod`, `Cargo.toml`, `pom.xml`, `build.gradle`).
 
@@ -79,24 +93,45 @@ For each subtree path from step 3:
 
 If the subtree directory doesn't exist yet, create it.
 
-Same overwrite rule: if `<subtree>/CLAUDE.md` exists, do not overwrite; show a diff and ask.
+### 6. Audit existing `CLAUDE.md` files (if any)
 
-### 6. Seed `docs/CHANGELOG.md`
+For every `CLAUDE.md` set aside in step 4 because it already existed, run an audit instead of overwriting. The point is to bring an older or hand-written file up to this skill's *current* recommendations without clobbering the project-specific content someone added.
+
+**a. Audit each file against the checklist.** Read `references/audit-checklist.md` in this skill's folder — it's the rubric (what every root and subtree `CLAUDE.md` should contain, the *why* behind each item, and what an outdated version looks like). For each existing file, classify every rubric item as **OK / Missing / Outdated / Stale**. Satisfied items aren't findings — only surface gaps. For existing subtree files you'll need the same stack/test-framework facts step 5 gathers (read the manifest + architecture doc) so you can judge S2/S3 fairly.
+
+**b. Present findings, grouped by file.** One scannable line per finding: the item, its classification, and a few words of why it matters — e.g.:
+
+> **`CLAUDE.md` (root)** — 2 findings
+> - *Outdated:* code-review mandate invokes `high` without `--fix` and tells the agent to ask which findings to fix — current convention is `high --fix` + auto-fix all, report grouped by severity.
+> - *Outdated:* changelog section is missing the archive + globally-unique-numbers rule.
+>
+> **`src/web/CLAUDE.md`** — 1 finding
+> - *Missing:* no browser-driven verification workflow for a UI subtree.
+>
+> **`src/api/CLAUDE.md`** — OK, nothing to update.
+
+If nothing is outdated anywhere, say so plainly and move on — don't invent work.
+
+**c. Ask which files to update.** One consolidated prompt offering the files that have findings — the user replies `all`, `none`, or a subset. Let them narrow within a file too ("just the changelog fix in root"). A file with no findings isn't offered.
+
+**d. Apply surgically to the chosen files.** Follow the "Applying updates" rules in `references/audit-checklist.md`: add Missing sections (filled from the project, not raw placeholders), rewrite Outdated sections to the current intent while keeping surrounding project-specific wording, fix Stale items, and **never delete custom sections the template never had**. Show the diff and confirm before writing each file. Files the user didn't pick are left exactly as-is.
+
+### 7. Seed `docs/CHANGELOG.md`
 
 If `docs/CHANGELOG.md` doesn't exist, create it with this five-line header so the agent has somewhere to write entries:
 
 ```markdown
 # Changelog
 
-Each entry is numbered with a monotonically increasing integer. Append new entries to the end. Never reuse or reorder numbers. Numbers are globally unique across this file and any future `CHANGELOG-archive.md` — never reused.
+Each entry is numbered with a monotonically increasing integer. Append new entries to the end. Never reuse or reorder numbers. Numbers are globally unique across this file and any future `CHANGELOG-archive.md` — never reused. Write each entry as durable project memory: what is now true that wasn't before, plus the why in a clause when not obvious — not a recap of the diff (filenames and mechanical edits live there). Keep it to 1–5 lines, ~20 words per line at most; never one packed run-on line.
 
 ```
 
-The full discipline rule lives in root CLAUDE.md (step 4 wrote it). The file itself just needs to exist.
+The full discipline rule lives in root CLAUDE.md (step 4 wrote it, or step 6 brought it current). The file itself just needs to exist.
 
 If `docs/CHANGELOG.md` already exists, leave it alone.
 
-### 7. Offer git-describe app versioning (optional)
+### 8. Offer git-describe app versioning (optional)
 
 Ask first; skip entirely if the user declines. This only pays off for a **deployed application** with a build/CI pipeline — a library, a one-off script, or a repo with no build step doesn't need it.
 
@@ -114,26 +149,26 @@ If the user opts in:
 
 3. **The CI gotcha that bites every stack** — CI checkouts default to a shallow clone with no tags, so `git describe --tags` silently degrades to a bare hash and builds lose their version. Whatever the pipeline, make the checkout fetch full history and tags (GitHub Actions: `fetch-depth: 0`; otherwise `git fetch --tags --unshallow`). Flag this in any build config you touch.
 
-### 8. Print next steps
+### 9. Print next steps
 
 Print a short summary listing:
 
-- Files created / files left alone (with paths).
+- Files created (scaffolded fresh), files updated (audited in step 6 and brought current), and files left alone (existing, no findings or not picked) — with paths.
 - Three reminders:
   - **Subtree CLAUDE.md tools, test framework, and verification workflow** were filled in from the project (package manifest + architecture). Required skills reflect the choices you made per subtree in step 5 — anything you didn't pick was left out. Skim and adjust.
-  - The `code-review` skill is already globally available — root CLAUDE.md already mandates it (invoked with the `high` argument) after non-trivial edits, so nothing to install.
+  - The `code-review` skill is already globally available — root CLAUDE.md already mandates it (invoked with the `high --fix` arguments) after non-trivial edits, so nothing to install.
   - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
 
 Stop. Do not start building domain skills or expanding the docs — those are separate decisions for the user.
 
 ## Safety
 
-- Never overwrite an existing `CLAUDE.md` without explicit user confirmation.
+- Never overwrite an existing `CLAUDE.md` blind. An existing file goes through the audit pass (step 6): updates are surgical and additive, shown as a diff, and applied only to files the user picks. Custom sections the template never had are never deleted.
 - Never modify `CONCEPT.md` or `ARCHITECTURE.md`.
 - Never modify `CHANGELOG.md` if it already exists.
 
 ## Scope
 
-**In scope:** writing CLAUDE.md scaffolding, seeding `docs/CHANGELOG.md`, optionally wiring git-describe app versioning (step 7, only if the user opts in — per-ecosystem recipes live in `references/app-versioning.md`).
+**In scope:** writing CLAUDE.md scaffolding, auditing and surgically updating existing CLAUDE.md files against the current recommendations (step 6, rubric in `references/audit-checklist.md`), seeding `docs/CHANGELOG.md`, optionally wiring git-describe app versioning (step 8, only if the user opts in — per-ecosystem recipes live in `references/app-versioning.md`).
 
 **Out of scope:** creating CONCEPT or ARCHITECTURE (the user does this), building domain skills (use `/skill-creator`), configuring hooks (use `update-config`), writing to user-side memory (per-user, not repo-side).
