@@ -56,7 +56,7 @@ Read the template at `templates/CLAUDE-root.md` in this skill's folder.
 Fill placeholders:
 - **Project name** — read it from `package.json`, `pyproject.toml`, `*.csproj`, `Cargo.toml`, or ask the user.
 - **Nested guidance pointers** — replace the example lines with the actual subtree paths from step 3, each with a one-line scope description (ask the user for the scope line if you can't infer it).
-- **Git workflow** — ask the user one question: should the agent commit directly to `main`, or branch and open a PR per change? This can't be inferred reliably, so always ask. Keep the matching mode in the Git workflow section and delete the other. If they pick branches, also capture the branch-naming convention and whether `main` is protected; if direct-to-`main`, capture the push policy. (This overrides the agent's generic default of "branch first, commit only when asked," so it's worth pinning explicitly.)
+- **Git workflow** — ask the user one question: should the agent commit directly to `main`, or branch and open a PR per change? This can't be inferred reliably, so always ask. Keep the matching mode in the Git workflow section and delete the other. If they pick branches, also capture the branch-naming convention and whether `main` is protected; if direct-to-`main`, capture the push policy. (This overrides only the *where* half of the agent's generic default, "branch first" — it must **not** override the *when* half, "commit only when asked." Keep the template's note that the mode chooses where commits go, not when, or the agent reads "direct to `main`" as license to commit proactively the moment a change is done.)
 
 Write to `<repo-root>/CLAUDE.md`.
 

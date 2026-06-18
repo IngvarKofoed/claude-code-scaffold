@@ -53,11 +53,11 @@ Once the fixes are applied, report what changed:
 
 <Keep the one mode that matches this repo; delete the other and this note.>
 
-**Direct to `main`** — commit straight to `main`; don't open branches or PRs unless asked. Each commit is one complete change including its `docs/CHANGELOG.md` entry. <Push policy, e.g. push after each commit, or leave pushing to the user.>
+**Direct to `main`** — when you commit, commit straight to `main`; don't open branches or PRs unless asked. <Push policy, e.g. push after each commit, or leave pushing to the user.>
 
-**Branch + PR** — never commit directly to `main`. For each change: branch from `main` (`<naming, e.g. feat/<slug>>`), commit (including the changelog entry), push, then open a PR. <Who/what merges; note here if `main` is protected.>
+**Branch + PR** — never commit directly to `main`. For each change: branch from `main` (`<naming, e.g. feat/<slug>>`), commit, push, then open a PR. <Who/what merges; note here if `main` is protected.>
 
-Either way, commit only when a change is complete — never leave the tree half-committed.
+**This setting only chooses *where* commits go — not *when* to make them.** Commit only when the user asks; finishing a change is not a cue to commit it. When you do commit, each commit is one complete change including its `docs/CHANGELOG.md` entry — never leave the tree half-committed.
 
 <!-- Add additional sections below as the project develops:
   - Project-specific forcing rules (e.g., "Check in with the user before making CSS / layout / UX changes")

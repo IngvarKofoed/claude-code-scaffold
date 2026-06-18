@@ -53,9 +53,10 @@ After a non-trivial edit, explicitly invoke the **`code-review`** skill with the
   - claims the review **auto-triggers** (it does not — it must be invoked explicitly).
 
 ### R6 — Git workflow
-States how the agent should use version control here: either commit directly to `main`, or branch and open a PR per change (with branch-naming / protected-`main` notes).
+States how the agent should use version control here: either commit directly to `main`, or branch and open a PR per change (with branch-naming / protected-`main` notes), plus a note that the mode chooses *where* commits go, not *when*.
 - *Why:* the agent's generic default ("branch first, commit only when asked") may not match this repo; an explicit convention removes the guesswork on every change.
 - *Missing looks like:* no git-workflow guidance at all, so the agent falls back to its default. Note: filling this in **requires asking the user** — the choice can't be inferred from the repo.
+- *Outdated looks like:* a "Direct to `main`" section that says to commit when a change is "complete" without stating that committing is still user-initiated — the agent reads it as license to commit proactively the moment work is done. Flag it and add the "where, not when" clarification.
 
 ---
 
