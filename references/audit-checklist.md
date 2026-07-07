@@ -44,8 +44,9 @@ Lists each subtree `CLAUDE.md` with a one-line scope.
 - *Stale looks like:* a pointer to a subtree that no longer exists, or a missing pointer for a subtree that now has its own `CLAUDE.md`. (Cross-check against the subtrees identified earlier in the run.)
 
 ### R5 — "After making changes" / code-review mandate
-After a non-trivial edit, explicitly invoke the **`code-review`** skill with the `high --fix` arguments, apply **every** finding automatically, then report grouped by severity (blocker / should-fix / nit), one line per bucket, without stopping to ask which to fix.
+After a non-trivial edit, explicitly invoke the **`code-review`** skill with `--fix` (default effort `medium`; `high --fix` for large or high-risk changes), apply **every** finding automatically, then report grouped by severity (blocker / should-fix / nit), one line per bucket, without stopping to ask which to fix.
 - *Why:* a consistent quality gate on every change.
+- *Effort level is the project's call* — do **not** flag a mandate as outdated merely because it uses `high` (a stricter, valid choice) or `medium`. Only the structural drifts below are findings.
 - *Outdated looks like* (this is the most common drift, and the highest-value find):
   - invokes `code-review` with `high` but **without `--fix`**;
   - tells the agent to **ask the user which findings to fix** instead of auto-fixing all of them;
@@ -57,6 +58,11 @@ States how the agent should use version control here: either commit directly to 
 - *Why:* the agent's generic default ("branch first, commit only when asked") may not match this repo; an explicit convention removes the guesswork on every change.
 - *Missing looks like:* no git-workflow guidance at all, so the agent falls back to its default. Note: filling this in **requires asking the user** — the choice can't be inferred from the repo.
 - *Outdated looks like:* a "Direct to `main`" section that says to commit when a change is "complete" without stating that committing is still user-initiated — the agent reads it as license to commit proactively the moment work is done. Flag it and add the "where, not when" clarification.
+
+### R7 — Multi-agent workflow (ultracode) cost-tiering
+When the agent fans a task across subagents (the Workflow tool / "ultracode"), it tiers model + reasoning effort per agent — strongest model for contracts / correctness-critical implementation / review / verification / synthesis; a mid model for build-test runners and mechanical implementation; the cheapest model + low effort for docs / i18n / styling — with the guardrail that only mechanical stages get a cheaper model.
+- *Why:* an untiered fan-out defaults every agent to the session's strongest (most expensive) model; tiering cuts cost without touching the stages that catch problems.
+- *This is a suggestion, not a hard gap.* Only offer it for a repo where multi-agent workflows are plausibly used; a tiny library that will never run one doesn't need it. Absence is not a finding on its own.
 
 ---
 

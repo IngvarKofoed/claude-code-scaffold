@@ -13,7 +13,7 @@ A short, opinionated catalog of Claude Code ecosystem items the `scaffold` skill
 Two things explicitly *not* covered here, because the scaffold skill picks them from elsewhere:
 
 - **Language servers from the package manifest** — picked by reading `package.json` / `*.csproj` / etc.
-- **The `code-review` skill** — mandated globally from root CLAUDE.md (invoked with the `high` argument), never per-subtree.
+- **The `code-review` skill** — mandated globally from root CLAUDE.md (invoked with `--fix`, default effort `medium`), never per-subtree.
 
 ## How the skill uses the catalog
 

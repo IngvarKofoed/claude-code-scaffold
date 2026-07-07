@@ -41,13 +41,23 @@ Each `src/` subtree (or service / package / area) has its own `CLAUDE.md` with s
 
 ## After making changes
 
-After a non-trivial edit, invoke the **`code-review`** skill with the `high --fix` arguments to review the touched code for correctness, reuse, clarity, and efficiency, then apply every finding to the working tree automatically. It does not auto-trigger — you must invoke it explicitly.
+After a non-trivial edit, invoke the **`code-review`** skill with the `medium --fix` arguments to review the touched code for correctness, reuse, clarity, and efficiency, then apply every finding to the working tree automatically. Bump to `high --fix` for large or high-risk changes — broad diffs, or security- / data-integrity-sensitive code. It does not auto-trigger — you must invoke it explicitly.
 
 Once the fixes are applied, report what changed:
 
 1. **Group the applied fixes by severity** — blockers (correctness bugs, data loss, security), should-fix (clear improvements, missed reuse), nits (style, naming, minor clarity).
 2. **Summarize each bucket in one line** so the user can see what was fixed without expanding every finding.
 3. Do not stop to ask which to fix — all findings are fixed by default. The user can review the diff and revert anything they disagree with.
+
+## Multi-agent workflows
+
+When you fan a task out across subagents — the Workflow tool ("ultracode") — tier each agent's model and reasoning effort to the work, so cost tracks value instead of every agent defaulting to the strongest (most expensive) model:
+
+- **Strongest model** (the session model) — contracts, correctness-critical implementation, adversarial review, per-finding verification, final synthesis. Never downgrade these; they are where quality is won or lost.
+- **Mid model** — build/test runners and straightforward mechanical implementation.
+- **Cheapest model + low effort** — docs/changelog, i18n, styling, and other boilerplate.
+
+The guardrail: only the mechanical stages get a cheaper model — the stages that *catch* problems stay strong. Set this per `agent()` call (`model` / `effort`); an agent that omits `model` inherits the session model, which is why an untiered fan-out silently runs everything on the most expensive tier. This section is inert unless you actually run a multi-agent workflow.
 
 ## Git workflow
 

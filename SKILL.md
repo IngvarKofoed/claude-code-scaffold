@@ -102,7 +102,7 @@ For every `CLAUDE.md` set aside in step 4 because it already existed, run an aud
 **b. Present findings, grouped by file.** One scannable line per finding: the item, its classification, and a few words of why it matters — e.g.:
 
 > **`CLAUDE.md` (root)** — 2 findings
-> - *Outdated:* code-review mandate invokes `high` without `--fix` and tells the agent to ask which findings to fix — current convention is `high --fix` + auto-fix all, report grouped by severity.
+> - *Outdated:* code-review mandate invokes `code-review` without `--fix` and tells the agent to ask which findings to fix — current convention is `--fix` + auto-fix all, report grouped by severity (default effort `medium`, `high` for large/high-risk changes).
 > - *Outdated:* changelog section is missing the archive + globally-unique-numbers rule.
 >
 > **`src/web/CLAUDE.md`** — 1 finding
@@ -154,9 +154,10 @@ If the user opts in:
 Print a short summary listing:
 
 - Files created (scaffolded fresh), files updated (audited in step 6 and brought current), and files left alone (existing, no findings or not picked) — with paths.
-- Three reminders:
+- Four reminders:
   - **Subtree CLAUDE.md tools, test framework, and verification workflow** were filled in from the project (package manifest + architecture). Required skills reflect the choices you made per subtree in step 5 — anything you didn't pick was left out. Skim and adjust.
-  - The `code-review` skill is already globally available — root CLAUDE.md already mandates it (invoked with the `high --fix` arguments) after non-trivial edits, so nothing to install.
+  - The `code-review` skill is already globally available — root CLAUDE.md already mandates it (invoked with `--fix`, default effort `medium`, `high` for large or high-risk changes) after non-trivial edits, so nothing to install.
+  - The root CLAUDE.md also carries a **multi-agent workflow ("ultracode") cost-tiering** rule — tier subagent model + effort to the work, keeping review / verification / hard-reasoning stages on the strong model. Inert unless the agent runs the Workflow tool.
   - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
 
 Stop. Do not start building domain skills or expanding the docs — those are separate decisions for the user.
