@@ -19,7 +19,7 @@ Common ones (add only those that apply):
 
 - **Verification workflow** — for subtrees where the obvious test (`run tests`, `tsc --noEmit`) doesn't catch what matters. Number the steps. Example (frontend / UI):
   > 1. Start the dev server.
-  > 2. Drive the changed feature in a real browser via Playwright MCP.
+  > 2. Drive the changed feature via Playwright MCP — headless by default, so rely on the page snapshot, not a visible window.
   > 3. Check console messages and network requests for errors.
   > 4. Only then report the change as complete.
 - **Required skills** — chain to project-specific skills (`foss-design-system`, security review, etc.) the agent must invoke for certain work.

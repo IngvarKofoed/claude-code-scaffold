@@ -65,6 +65,7 @@ git commit -m "Bump scaffold skill"
 - `references/subtree-skills.md` — opinionated catalog of skills/plugins/tools to mandate per subtree.
 - `references/app-versioning.md` — per-ecosystem git-describe versioning recipes for the optional versioning step (Node.js, .NET, Python, Go, Rust, JVM, containers).
 - `references/audit-checklist.md` — the rubric for auditing an existing `CLAUDE.md`: what each file should contain, why, what an outdated version looks like, and how to apply surgical updates.
+- `references/playwright-mcp.md` — for UI subtrees: how to verify Playwright MCP is installed and offer to install it headless (own user-scope server, `--headless`) if it isn't.
 
 Both templates carry placeholders (`<like this>`) you fill in during the scaffold run.
 

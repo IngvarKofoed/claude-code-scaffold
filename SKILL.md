@@ -69,7 +69,7 @@ For each subtree path from step 3 **whose `CLAUDE.md` doesn't exist yet** (exist
 2. **Read `templates/CLAUDE-subtree.md`** in this skill's folder.
 
 3. **Fill the easy slots directly from the project:**
-   - **Required tools** — at minimum, `LSP` for the subtree's primary language. Add browser tools (Playwright MCP) for UI subtrees. Quote the load instructions if the tool is deferred.
+   - **Required tools** — at minimum, `LSP` for the subtree's primary language. For UI subtrees, mandate browser tools (Playwright MCP) — but first confirm Playwright MCP is actually installed and connecting; if it's missing, or only available headed (e.g. bundled by a plugin), offer to install it headless per `references/playwright-mcp.md`. Run that availability check once per run, not per subtree. Quote the load instructions if the tool is deferred.
    - **Testing** — read the actual test framework from the package manifest (Vitest / Jest / xUnit / pytest / etc.) and pin it. Keep the "do not introduce a different test framework without updating the architecture doc" closing line — it's a forcing rule, not boilerplate.
    - **Verification workflow** — include the 4-step Playwright MCP pattern (already in the template's catch-all section) for UI subtrees; skip it for backend/library subtrees where the test suite is the verification.
 
@@ -154,8 +154,9 @@ If the user opts in:
 Print a short summary listing:
 
 - Files created (scaffolded fresh), files updated (audited in step 6 and brought current), and files left alone (existing, no findings or not picked) — with paths.
-- Four reminders:
+- Reminders:
   - **Subtree CLAUDE.md tools, test framework, and verification workflow** were filled in from the project (package manifest + architecture). Required skills reflect the choices you made per subtree in step 5 — anything you didn't pick was left out. Skim and adjust.
+  - **If you installed or reconfigured Playwright MCP during this run** (`references/playwright-mcp.md`), restart Claude Code or reconnect via `/mcp` before relying on the UI verification workflow — the new `mcp__playwright__*` tools aren't loaded in the current session yet.
   - The `code-review` skill is already globally available — root CLAUDE.md already mandates it (invoked with `--fix`, default effort `medium`, `high` for large or high-risk changes) after non-trivial edits, and, for significant changes, has the agent end the turn suggesting you run a deliberate `/code-review medium` pass yourself. Nothing to install.
   - The root CLAUDE.md also carries a **multi-agent workflow ("ultracode") cost-tiering** rule — tier subagent model + effort to the work, keeping review and hard-reasoning stages on the strong model (verifying concrete findings can drop to the mid model). Inert unless the agent runs the Workflow tool.
   - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
@@ -170,6 +171,6 @@ Stop. Do not start building domain skills or expanding the docs — those are se
 
 ## Scope
 
-**In scope:** writing CLAUDE.md scaffolding, auditing and surgically updating existing CLAUDE.md files against the current recommendations (step 6, rubric in `references/audit-checklist.md`), seeding `docs/CHANGELOG.md`, optionally wiring git-describe app versioning (step 8, only if the user opts in — per-ecosystem recipes live in `references/app-versioning.md`).
+**In scope:** writing CLAUDE.md scaffolding, auditing and surgically updating existing CLAUDE.md files against the current recommendations (step 6, rubric in `references/audit-checklist.md`), seeding `docs/CHANGELOG.md`, optionally wiring git-describe app versioning (step 8, only if the user opts in — per-ecosystem recipes live in `references/app-versioning.md`), and — for UI subtrees only — verifying Playwright MCP is installed and offering to install it headless if it isn't (`references/playwright-mcp.md`).
 
-**Out of scope:** creating CONCEPT or ARCHITECTURE (the user does this), building domain skills (use `/skill-creator`), configuring hooks (use `update-config`), writing to user-side memory (per-user, not repo-side).
+**Out of scope:** creating CONCEPT or ARCHITECTURE (the user does this), building domain skills (use `/skill-creator`), configuring hooks and general MCP-server or plugin management beyond the narrow Playwright-for-UI convenience above (use `update-config`), writing to user-side memory (per-user, not repo-side).
