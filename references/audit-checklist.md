@@ -44,14 +44,15 @@ Lists each subtree `CLAUDE.md` with a one-line scope.
 - *Stale looks like:* a pointer to a subtree that no longer exists, or a missing pointer for a subtree that now has its own `CLAUDE.md`. (Cross-check against the subtrees identified earlier in the run.)
 
 ### R5 — "After making changes" / code-review mandate
-After a non-trivial edit, explicitly invoke the **`code-review`** skill with `--fix` (default effort `medium`; `high --fix` for large or high-risk changes), apply **every** finding automatically, then report grouped by severity (blocker / should-fix / nit), one line per bucket, without stopping to ask which to fix.
-- *Why:* a consistent quality gate on every change.
+After a non-trivial edit, explicitly invoke the **`code-review`** skill with `--fix` (default effort `medium`; `high --fix` for large or high-risk changes), apply **every** finding automatically, then report grouped by severity (blocker / should-fix / nit), one line per bucket, without stopping to ask which to fix. Plus, for **significant** changes (a broad or high-risk diff, or a large batch of auto-applied fixes), it ends the turn suggesting the user run `/code-review medium` themselves — a deliberate, user-initiated pass, because the auto-applied fixes are never re-reviewed and a big diff warrants a second look.
+- *Why:* a consistent quality gate on every change, plus a human-in-the-loop checkpoint for the changes big enough that the one auto-fix pass isn't reassurance enough.
 - *Effort level is the project's call* — do **not** flag a mandate as outdated merely because it uses `high` (a stricter, valid choice) or `medium`. Only the structural drifts below are findings.
 - *Outdated looks like* (this is the most common drift, and the highest-value find):
   - invokes `code-review` with `high` but **without `--fix`**;
   - tells the agent to **ask the user which findings to fix** instead of auto-fixing all of them;
   - references an **old skill name** (e.g. a pre-rename `/review`-style name) instead of `code-review`;
-  - claims the review **auto-triggers** (it does not — it must be invoked explicitly).
+  - claims the review **auto-triggers** (it does not — it must be invoked explicitly);
+  - has the auto-run `--fix` mandate but **no end-of-turn nudge to suggest a deliberate `/code-review medium` pass after significant changes** — so auto-applied fixes and large diffs ship without the human-in-the-loop checkpoint. (Newer recommendation; flag its absence as Outdated.)
 
 ### R6 — Git workflow
 States how the agent should use version control here: either commit directly to `main`, or branch and open a PR per change (with branch-naming / protected-`main` notes), plus a note that the mode chooses *where* commits go, not *when*.

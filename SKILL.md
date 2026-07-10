@@ -156,7 +156,7 @@ Print a short summary listing:
 - Files created (scaffolded fresh), files updated (audited in step 6 and brought current), and files left alone (existing, no findings or not picked) — with paths.
 - Four reminders:
   - **Subtree CLAUDE.md tools, test framework, and verification workflow** were filled in from the project (package manifest + architecture). Required skills reflect the choices you made per subtree in step 5 — anything you didn't pick was left out. Skim and adjust.
-  - The `code-review` skill is already globally available — root CLAUDE.md already mandates it (invoked with `--fix`, default effort `medium`, `high` for large or high-risk changes) after non-trivial edits, so nothing to install.
+  - The `code-review` skill is already globally available — root CLAUDE.md already mandates it (invoked with `--fix`, default effort `medium`, `high` for large or high-risk changes) after non-trivial edits, and, for significant changes, has the agent end the turn suggesting you run a deliberate `/code-review medium` pass yourself. Nothing to install.
   - The root CLAUDE.md also carries a **multi-agent workflow ("ultracode") cost-tiering** rule — tier subagent model + effort to the work, keeping review and hard-reasoning stages on the strong model (verifying concrete findings can drop to the mid model). Inert unless the agent runs the Workflow tool.
   - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
 
