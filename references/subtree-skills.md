@@ -13,7 +13,7 @@ A short, opinionated catalog of Claude Code ecosystem items the `scaffold` skill
 Two things explicitly *not* covered here, because the scaffold skill picks them from elsewhere:
 
 - **Language servers from the package manifest** — picked by reading `package.json` / `*.csproj` / etc.
-- **The `code-review` skill** — mandated globally from root CLAUDE.md (invoked with `--fix`, default effort `medium`), never per-subtree.
+- **The after-edits self-review** — mandated globally from root CLAUDE.md (the agent runs a code-review-grade review of its own changes and auto-fixes; `/code-review` stays a user-run pass), never per-subtree.
 
 ## How the skill uses the catalog
 
@@ -57,7 +57,7 @@ Two things explicitly *not* covered here, because the scaffold skill picks them 
 
 ## When zero items is the right answer
 
-Many subtrees genuinely don't need anything beyond the global `code-review` mandate:
+Many subtrees genuinely don't need anything beyond the global self-review mandate:
 
 - Library packages with thorough unit tests.
 - Pure backend subtrees with no security-sensitive surface.

@@ -102,7 +102,7 @@ For every `CLAUDE.md` set aside in step 4 because it already existed, run an aud
 **b. Present findings, grouped by file.** One scannable line per finding: the item, its classification, and a few words of why it matters — e.g.:
 
 > **`CLAUDE.md` (root)** — 2 findings
-> - *Outdated:* code-review mandate invokes `code-review` without `--fix` and tells the agent to ask which findings to fix — current convention is `--fix` + auto-fix all, report grouped by severity (default effort `medium`, `high` for large/high-risk changes).
+> - *Outdated:* per-edit review mandate tells the agent to invoke the `code-review` skill (it can't — `disable-model-invocation`) — current convention is a self-review of the diff, auto-fix all, report grouped by severity, plus suggest a user-run `/code-review medium` pass after significant changes.
 > - *Outdated:* changelog section is missing the archive + globally-unique-numbers rule.
 >
 > **`src/web/CLAUDE.md`** — 1 finding
@@ -157,7 +157,7 @@ Print a short summary listing:
 - Reminders:
   - **Subtree CLAUDE.md tools, test framework, and verification workflow** were filled in from the project (package manifest + architecture). Required skills reflect the choices you made per subtree in step 5 — anything you didn't pick was left out. Skim and adjust.
   - **If you installed or reconfigured Playwright MCP during this run** (`references/playwright-mcp.md`), restart Claude Code or reconnect via `/mcp` before relying on the UI verification workflow — the new `mcp__playwright__*` tools aren't loaded in the current session yet.
-  - The `code-review` skill is already globally available — root CLAUDE.md already mandates it (invoked with `--fix`, default effort `medium`, `high` for large or high-risk changes) after non-trivial edits, and, for significant changes, has the agent end the turn suggesting you run a deliberate `/code-review medium` pass yourself. Nothing to install.
+  - **Review after edits is built in** — root CLAUDE.md has the agent run a code-review-grade review of its own changes automatically (a single careful pass for small edits; a subagent fan-out via the Agent tool, findings verified, for substantial ones), auto-fix everything, and report grouped by severity. When that review churned a lot or the change is complex, it ends the turn noting the code's already been reviewed and suggesting you run a deliberate `/code-review medium` pass yourself for extra assurance. The `/code-review` *skill* is user-invoke-only (`disable-model-invocation`) — the agent can't call it, which is why it runs the review itself; the deliberate pass is yours to trigger. Nothing to install.
   - The root CLAUDE.md also carries a **multi-agent workflow ("ultracode") cost-tiering** rule — tier subagent model + effort to the work, keeping review and hard-reasoning stages on the strong model (verifying concrete findings can drop to the mid model). Inert unless the agent runs the Workflow tool.
   - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
 

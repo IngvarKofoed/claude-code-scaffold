@@ -41,7 +41,14 @@ Each `src/` subtree (or service / package / area) has its own `CLAUDE.md` with s
 
 ## After making changes
 
-After a non-trivial edit, invoke the **`code-review`** skill with the `medium --fix` arguments to review the touched code for correctness, reuse, clarity, and efficiency, then apply every finding to the working tree automatically. Bump to `high --fix` for large or high-risk changes — broad diffs, or security- / data-integrity-sensitive code. It does not auto-trigger — you must invoke it explicitly.
+After a non-trivial edit, **give the change a real review automatically — code-review quality, self-initiated** — so every change gets reviewed without anyone having to invoke anything. The `/code-review` skill is user-invoke-only (`disable-model-invocation`); you cannot call it, so *you* run the review — never skip it, and never apologize for not running the skill.
+
+Scale the review to the change:
+
+- **Small, contained edits** — read the diff yourself in one careful pass.
+- **Substantial or complex changes** — fan the review out across **subagents via the Agent tool** (individual agents; this needs no ultracode opt-in — that gate is only for the Workflow tool), **one per dimension that's actually at risk in this diff (typically 2–4)**, then **verify each finding before acting on it**. Review finders run on the strong model; verification can drop a tier (the same tiering as *Multi-agent workflows* below). If the Agent tool isn't available, do the same review yourself in one thorough pass.
+
+Check, across the diff: **correctness, security & data-integrity, edge cases & tests, reuse / duplication, clarity, performance, and conformance to this repo's own conventions** (the CLAUDE.md rules and established patterns). Then **apply every fix to the working tree automatically.**
 
 Once the fixes are applied, report what changed:
 
@@ -49,7 +56,7 @@ Once the fixes are applied, report what changed:
 2. **Summarize each bucket in one line** so the user can see what was fixed without expanding every finding.
 3. Do not stop to ask which to fix — all findings are fixed by default. The user can review the diff and revert anything they disagree with.
 
-**For significant changes, also suggest a deliberate pass.** The auto-fix above runs once and applies its findings without re-reviewing them — so a large change ships with its own fixes unreviewed. When a turn produced significant changes — a broad or high-risk diff, or a batch of auto-applied fixes big enough to warrant a second look — **end the turn by suggesting the user run `/code-review medium` themselves.** This is a suggestion, not another auto-run: it leaves the call to spend a fresh review cycle (and to eyeball the auto-applied fixes) with the user. Skip it for small, routine edits, where it's just noise.
+**When the self-review churned a lot, or the change is complex, offer an extra pass.** Either trigger alone is enough: your self-review above applied *a lot* of fixes (so a review *of that review* is worth it), or the changeset is inherently complex. In that case — and only then — **end the turn by telling the user the code has already been self-reviewed and applied fixes, and suggesting they run `/code-review medium` themselves to be extra sure it's good.** Frame it as optional reassurance on a fresh, independent pass, not a warning that something is wrong. `/code-review` is user-invoke-only, so only they can run it. Only claim the code was already reviewed if you actually ran the self-review above. Skip the suggestion entirely for small or routine changes, and for ones the self-review barely touched — there it's just noise.
 
 ## Multi-agent workflows
 
@@ -62,6 +69,8 @@ When you fan a task out across subagents — the Workflow tool ("ultracode") —
 The guardrail: the stage that *catches* an unknown problem (review) stays strong; a stage that only *checks* or *applies* an already-identified one drops a tier by default — escalate a verifier back to the strong model only for subtle or security-/data-integrity-critical findings. For a small finding set, fold verification into the fix-apply agent (verify-and-fix in one pass) rather than one strong agent per finding. Set this per `agent()` call (`model` / `effort`); an agent that omits `model` inherits the session model, which is why an untiered fan-out silently runs everything on the most expensive tier.
 
 **Invoking a named workflow is not authoring one.** The tiers above are yours to set only when *you* write the `agent()` calls. A built-in or named workflow — e.g. `Workflow({ name: 'code-review' })` — runs its own stages on the session model; nothing tiers them for you, so a wide fan-out (the review's per-`(file,line)` verifiers most of all) silently bills every agent at the top tier. Before launching one at `high`+ effort or over a broad diff, check the `scriptPath` the run reports: if a large *checking* stage isn't tiered, edit that script to drop those agents to the mid model (leaving the finders and final synthesis strong) and re-invoke with `{ scriptPath }` instead. Keep them strong only when the diff is security-/data-integrity-critical. For `code-review` specifically: its verifier agents default to the mid model.
+
+**When a workflow returns, self-review its aggregate diff.** A fan-out edits files across several subagents — often in separate worktrees — so no single agent ever saw the whole combined change. The moment control returns to you, the `## After making changes` self-review applies to the **entire diff the workflow produced**: read it as one coherent change, not per-agent, and apply fixes. And because a multi-agent change has no single author who reviewed the whole thing, it is a prime candidate for the heavy/complex trigger there — tell the user the code's been self-reviewed and suggest they run `/code-review medium` to be extra sure. (Any review stage *inside* the workflow checks its findings/outputs; it does not replace this pass over the landed diff.)
 
 This section is inert unless you actually run a multi-agent workflow.
 
