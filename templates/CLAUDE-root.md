@@ -56,7 +56,27 @@ Once the fixes are applied, report what changed:
 2. **Summarize each bucket in one line** so the user can see what was fixed without expanding every finding.
 3. Do not stop to ask which to fix — all findings are fixed by default. The user can review the diff and revert anything they disagree with.
 
-**When the self-review churned a lot, or the change is complex, offer an extra pass.** Either trigger alone is enough: your self-review above applied *a lot* of fixes (so a review *of that review* is worth it), or the changeset is inherently complex. In that case — and only then — **end the turn by telling the user the code has already been self-reviewed and applied fixes, and suggesting they run `/code-review medium` themselves to be extra sure it's good.** Frame it as optional reassurance on a fresh, independent pass, not a warning that something is wrong. `/code-review` is user-invoke-only, so only they can run it. Only claim the code was already reviewed if you actually ran the self-review above. Skip the suggestion entirely for small or routine changes, and for ones the self-review barely touched — there it's just noise.
+### Suggesting a user-run `/code-review`
+
+**Default: say nothing.** Most turns end with the self-review report and no suggestion. The review already happened; a reflexive "you may also want to run `/code-review`" on every diff is noise, and trains the user to ignore it on the one change where it mattered. Suggest a pass only when you can **name the trigger that fired**. Can't name one? Don't suggest.
+
+**Triggers — any one is enough:**
+
+- **Heavy self-review** — you fixed a genuine blocker (a real correctness, security, or data-integrity bug), or applied should-fix changes across most of the files you touched. A handful of nits is not churn.
+- **High-consequence surface** — the diff touches authn/authz, permissions, secrets or crypto, money/billing, schema migrations or data deletion/backfill, concurrency or locking, or a published API / wire contract.
+- **Large and non-mechanical** — roughly >400 changed lines or >10 files of real logic. A rename, a formatting sweep, or generated files of the same size do not count.
+- **Multi-agent fan-out produced the diff** — no single agent ever saw the whole combined change.
+- **Genuine uncertainty** — you guessed at intent, left a known gap, or couldn't verify the change (nothing covers it, or you couldn't run it).
+
+**Level — choose it, don't default to one:**
+
+- **`/code-review medium`** — the ordinary triggered case: a large refactor, a heavy self-review, or a workflow-produced diff on ordinary code.
+- **`/code-review high`** — when the high-consequence-surface trigger fired, when you fixed **more than one** blocker, or when two or more triggers fired at once. It's slower and costlier, so it needs one of those reasons — size alone isn't one.
+- Never suggest above `high`; going deeper than that is the user's call to make unprompted.
+
+**These do *not* trigger it:** docs- or changelog-only edits, formatting and lint fixes, dependency bumps, adding tests to existing code, a contained single-function change with tests passing, or a self-review that turned up only nits on ordinary code.
+
+When you do suggest: **one sentence** at the end of the turn — the code is already self-reviewed with fixes applied, a fresh independent pass would add assurance, and **which trigger fired**. Frame it as optional reassurance, not a warning that something is wrong. `/code-review` is user-invoke-only, so only they can run it. Only claim the code was already reviewed if you actually ran the self-review above.
 
 ## Multi-agent workflows
 
@@ -70,7 +90,7 @@ The guardrail: the stage that *catches* an unknown problem (review) stays strong
 
 **Invoking a named workflow is not authoring one.** The tiers above are yours to set only when *you* write the `agent()` calls. A built-in or named workflow — e.g. `Workflow({ name: 'code-review' })` — runs its own stages on the session model; nothing tiers them for you, so a wide fan-out (the review's per-`(file,line)` verifiers most of all) silently bills every agent at the top tier. Before launching one at `high`+ effort or over a broad diff, check the `scriptPath` the run reports: if a large *checking* stage isn't tiered, edit that script to drop those agents to the mid model (leaving the finders and final synthesis strong) and re-invoke with `{ scriptPath }` instead. Keep them strong only when the diff is security-/data-integrity-critical. For `code-review` specifically: its verifier agents default to the mid model.
 
-**When a workflow returns, self-review its aggregate diff.** A fan-out edits files across several subagents — often in separate worktrees — so no single agent ever saw the whole combined change. The moment control returns to you, the `## After making changes` self-review applies to the **entire diff the workflow produced**: read it as one coherent change, not per-agent, and apply fixes. And because a multi-agent change has no single author who reviewed the whole thing, it is a prime candidate for the heavy/complex trigger there — tell the user the code's been self-reviewed and suggest they run `/code-review medium` to be extra sure. (Any review stage *inside* the workflow checks its findings/outputs; it does not replace this pass over the landed diff.)
+**When a workflow returns, self-review its aggregate diff.** A fan-out edits files across several subagents — often in separate worktrees — so no single agent ever saw the whole combined change. The moment control returns to you, the `## After making changes` self-review applies to the **entire diff the workflow produced**: read it as one coherent change, not per-agent, and apply fixes. A multi-agent change has no single author who saw the whole thing, so it fires the *multi-agent fan-out* trigger in **Suggesting a user-run `/code-review`** above — make the suggestion, and pick the level by the rule there (`high` if it also touched a high-consequence surface or the self-review fixed more than one blocker). (Any review stage *inside* the workflow checks its findings/outputs; it does not replace this pass over the landed diff.)
 
 This section is inert unless you actually run a multi-agent workflow.
 
