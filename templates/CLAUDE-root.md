@@ -62,6 +62,23 @@ Once the fallback's fixes are applied, report what changed (when `/fix-code` ran
 
 Say plainly when the change is one you couldn't fully verify — you guessed at intent, left a known gap, or nothing covers it — so the user knows where their own judgement is still needed. State it as a fact about the change, not as a recommendation to run anything.
 
+### Before committing: offer the fresh-eyes pass
+
+An earlier review never covers later edits — each round of non-trivial changes gets its own pass, above, and a follow-up request ("also add X", "now handle Y") is a new change, not a continuation of one already reviewed. What erodes across rounds is your distance from the code: by the second or third follow-up you're reviewing your own patch from inside the context that wrote it, with the same blind spots, and each inline pass only ever saw its own turn's edits. Nothing has read the accumulated diff as one change.
+
+A commit request is where that gets settled, because it's the moment the diff is sealed into history. So **when the user asks you to commit (or commit and push) and the working tree holds non-trivial changes that no `/fix-code --fix` run has seen, ask before committing** — `AskUserQuestion`, two options:
+
+1. **Review first** — run `/fix-code --fix` over the working diff, then commit with its repairs included.
+2. **Commit now** — the per-round reviews stand; go straight to the commit.
+
+**You** run the pass either way; the user is only choosing whether it happens. This is the one place the review flow stops to ask — it replaces any end-of-turn nudge to go run a review, which fires too often to carry signal.
+
+- Only when `fix-code` is installed. Without it, commit as asked — you have no better pass to offer than the ones already run.
+- **Skip the question** when `/fix-code --fix` has already run over this working diff since the last edit (it saw the whole thing), or when the diff is trivial — a typo, a version bump, a changelog line. Asking there is noise.
+- Ask **once per commit request**, not per round or per file. If the user picks the review, run it, report as usual, then continue to the commit without asking again.
+- **Any** commit request goes through the gate, including a delegated one (`/git commit`, `/git commitandpush`) — check it before handing off, not after. A skill or subagent that does the committing never sees this rule.
+- Never let the offer stand in for the work: this round's diff still gets its own review and its fixes before you ask anything.
+
 ## Multi-agent workflows
 
 When you fan a task out across subagents — the Workflow tool ("ultracode") — tier each agent's model and reasoning effort to the work, so cost tracks value instead of every agent defaulting to the strongest (most expensive) model:
@@ -87,6 +104,8 @@ This section is inert unless you actually run a multi-agent workflow.
 **Branch + PR** — never commit directly to `main`. For each change: branch from `main` (`<naming, e.g. feat/<slug>>`), commit, push, then open a PR. <Who/what merges; note here if `main` is protected.>
 
 **This setting only chooses *where* commits go — not *when* to make them.** Commit only when the user asks; finishing a change is not a cue to commit it. When you do commit, each commit is one complete change including its `docs/CHANGELOG.md` entry — never leave the tree half-committed.
+
+A commit request first passes through *Before committing: offer the fresh-eyes pass* above — check that gate before staging anything.
 
 <!-- Add additional sections below as the project develops:
   - Project-specific forcing rules (e.g., "Check in with the user before making CSS / layout / UX changes")
