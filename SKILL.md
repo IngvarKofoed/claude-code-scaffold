@@ -1,6 +1,6 @@
 ---
 name: scaffold
-description: "Bootstrap a repository's CLAUDE.md scaffolding once `docs/CONCEPT.md` and `docs/ARCHITECTURE.md` already exist. Use this skill when the user says any of: 'scaffold this repo', 'set up CLAUDE.md', 'bootstrap this repo for Claude', 'initialize the agent scaffolding', 'create the CLAUDE.md files', 'wire up the CLAUDE.md', or any phrasing that implies a fresh repo needs its CLAUDE.md files written now that the anchoring docs are done. Also triggers on 'I've written my CONCEPT and ARCHITECTURE, now what?' or 'create root and subtree CLAUDE.md'. Writes root + per-subtree CLAUDE.md from templates in this skill's folder, seeds an empty `docs/CHANGELOG.md`, optionally wires git-describe app versioning, prints next steps. When CLAUDE.md files already exist it never overwrites blind: it audits each one against this skill's current recommendations, reports per file what's missing or outdated (e.g. an old code-review mandate, a changelog section without the numbering rule), and asks which files to bring up to date — applying only surgical, additive updates that preserve project-specific content. So also trigger this skill on 'audit my CLAUDE.md', 'are my CLAUDE.md files up to date', 'check my CLAUDE.md against the latest recommendations / scaffold conventions', or 'update CLAUDE.md to the current conventions'."
+description: "Bootstrap a repository's CLAUDE.md scaffolding once `docs/CONCEPT.md` and `docs/ARCHITECTURE.md` already exist. Use this skill when the user says any of: 'scaffold this repo', 'set up CLAUDE.md', 'bootstrap this repo for Claude', 'initialize the agent scaffolding', 'create the CLAUDE.md files', 'wire up the CLAUDE.md', or any phrasing that implies a fresh repo needs its CLAUDE.md files written now that the anchoring docs are done. Also triggers on 'I've written my CONCEPT and ARCHITECTURE, now what?' or 'create root and subtree CLAUDE.md'. Writes root + per-subtree CLAUDE.md from templates in this skill's folder, seeds an empty `docs/CHANGELOG.md`, optionally wires git-describe app versioning, prints next steps. When CLAUDE.md files already exist it never overwrites blind: it audits each one against this skill's current recommendations, reports per file what's missing or outdated (e.g. an old review mandate, a changelog section without the numbering rule), and asks which files to bring up to date — applying only surgical, additive updates that preserve project-specific content. So also trigger this skill on 'audit my CLAUDE.md', 'are my CLAUDE.md files up to date', 'check my CLAUDE.md against the latest recommendations / scaffold conventions', or 'update CLAUDE.md to the current conventions'."
 ---
 
 # scaffold
@@ -102,8 +102,8 @@ For every `CLAUDE.md` set aside in step 4 because it already existed, run an aud
 **b. Present findings, grouped by file.** One scannable line per finding: the item, its classification, and a few words of why it matters — e.g.:
 
 > **`CLAUDE.md` (root)** — 2 findings
-> - *Outdated:* per-edit review mandate tells the agent to invoke the `code-review` skill (it can't — `disable-model-invocation`) — current convention is a self-review of the diff, auto-fix all, report grouped by severity.
-> - *Outdated:* the `/code-review` nudge is gated on "significant or complex" and hardcodes `medium` — so it fires nearly every turn at one level; current convention is silence by default, named triggers, and a `medium`/`high` rule.
+> - *Outdated:* per-edit review mandate defers the pass to a review tool the agent is told to invoke — current convention is a self-review of the diff, auto-fix all, report grouped by severity.
+> - *Outdated:* ends every turn nudging the user toward a separate review pass — current convention drops the nudge and just states what couldn't be verified.
 > - *Outdated:* changelog section is missing the archive + globally-unique-numbers rule.
 >
 > **`src/web/CLAUDE.md`** — 1 finding
@@ -150,7 +150,37 @@ If the user opts in:
 
 3. **The CI gotcha that bites every stack** — CI checkouts default to a shallow clone with no tags, so `git describe --tags` silently degrades to a bare hash and builds lose their version. Whatever the pipeline, make the checkout fetch full history and tags (GitHub Actions: `fetch-depth: 0`; otherwise `git fetch --tags --unshallow`). Flag this in any build config you touch.
 
-### 9. Print next steps
+### 9. Offer to install the companion skills (optional)
+
+The root CLAUDE.md this skill writes *prefers* two skills but never depends on them. Same reasoning as Playwright MCP (`references/playwright-mcp.md`): a mandate that names a tool is worth more when the tool is actually there, so check, and offer — don't assume, and don't install unasked.
+
+**The repo name and the skill name differ** — the repos are prefixed `claude-code-`, the skills are not. Install directory and skill name are always the short form:
+
+| Skill | Install as | What the scaffolding uses it for | Repo |
+| --- | --- | --- | --- |
+| `fix-code` | `~/.claude/skills/fix-code/` | The preferred after-edits review (`/fix-code --fix`) in root CLAUDE.md. Without it the agent falls back to the inline review — correct, just less calibrated. | `https://github.com/IngvarKofoed/claude-code-fix-code` |
+| `git` | `~/.claude/skills/git/` | Commit/push delegated to a cheap Haiku subagent, keeping the main session's context and cost down. | `https://github.com/IngvarKofoed/claude-code-git` |
+
+**a. Detect what's already there.** A skill counts as installed if it appears in your own available-skills listing, or if `~/.claude/skills/fix-code/` / `~/.claude/skills/git/` exists — the **short** names, not the repo names. **If both are installed, skip this step in silence** — no question, no mention in the summary.
+
+**b. Ask only about what's missing.** For each missing skill, ask one `AskUserQuestion` question — both in a single call when both are missing, one question when only one is. Options: **install** (user-level, `~/.claude/skills/`, available in every repo) or **skip** (the CLAUDE.md fallback covers it). Never install without an explicit pick.
+
+**c. Install user-level, under the short name.** Always name the target directory explicitly, or git derives it from the URL and you get `~/.claude/skills/claude-code-fix-code/` — a folder whose name doesn't match the skill:
+
+```bash
+git clone https://github.com/IngvarKofoed/claude-code-fix-code ~/.claude/skills/fix-code
+git clone https://github.com/IngvarKofoed/claude-code-git      ~/.claude/skills/git
+```
+
+`skill-manager:add` is the nicer route when that plugin is present, since it registers the skill for auto-update — but confirm afterwards that the installed folder is the short name, and rename it if not.
+
+**d. Note the reload.** A freshly installed skill isn't callable in the current session until skills reload — tell the user to run `/reload-skills` or restart Claude Code. Until then the CLAUDE.md fallback is what will actually run, which is fine.
+
+Install user-level only. Don't offer to clone either skill into the repo — a nested clone can't be committed as-is, and a personal skill inside a shared repo decides the whole team's toolchain.
+
+If a clone fails (no network, no access to a private repo), say so in one line and move on. The scaffolding works without either skill; that's the whole point of the fallback.
+
+### 10. Print next steps
 
 Print a short summary listing:
 
@@ -158,7 +188,7 @@ Print a short summary listing:
 - Reminders:
   - **Subtree CLAUDE.md tools, test framework, and verification workflow** were filled in from the project (package manifest + architecture). Required skills reflect the choices you made per subtree in step 5 — anything you didn't pick was left out. Skim and adjust.
   - **If you installed or reconfigured Playwright MCP during this run** (`references/playwright-mcp.md`), restart Claude Code or reconnect via `/mcp` before relying on the UI verification workflow — the new `mcp__playwright__*` tools aren't loaded in the current session yet.
-  - **Review after edits is built in** — root CLAUDE.md has the agent run a code-review-grade review of its own changes automatically (a single careful pass for small edits; a subagent fan-out via the Agent tool, findings verified, for substantial ones), auto-fix everything, and report grouped by severity. Separately, it may end the turn suggesting *you* run a deliberate `/code-review` — but that nudge **defaults to silence** and fires only on a named trigger (a blocker fixed, a high-consequence surface like auth/money/migrations, a large non-mechanical diff, a multi-agent-produced diff, or genuine uncertainty), at `medium` normally and `high` for the riskiest of those. The `/code-review` *skill* is user-invoke-only (`disable-model-invocation`) — the agent can't call it, which is why it runs the review itself; the deliberate pass is yours to trigger. Nothing to install.
+  - **Review after edits is built in** — root CLAUDE.md has the agent review its own changes automatically and auto-fix what it finds. It prefers `/fix-code --fix` when that skill is installed, and otherwise does the same job inline (a single careful pass for small edits; a subagent fan-out via the Agent tool, findings verified, for substantial ones), reporting grouped by severity. Either way it closes by stating plainly anything it couldn't fully verify — a guessed intent, a known gap, an uncovered path. The fallback needs nothing installed, so the mandate never goes dead.
   - The root CLAUDE.md also carries a **multi-agent workflow ("ultracode") cost-tiering** rule — tier subagent model + effort to the work, keeping review and hard-reasoning stages on the strong model (verifying concrete findings can drop to the mid model). Inert unless the agent runs the Workflow tool.
   - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
 
@@ -172,6 +202,6 @@ Stop. Do not start building domain skills or expanding the docs — those are se
 
 ## Scope
 
-**In scope:** writing CLAUDE.md scaffolding, auditing and surgically updating existing CLAUDE.md files against the current recommendations (step 6, rubric in `references/audit-checklist.md`), seeding `docs/CHANGELOG.md`, optionally wiring git-describe app versioning (step 8, only if the user opts in — per-ecosystem recipes live in `references/app-versioning.md`), and — for UI subtrees only — verifying Playwright MCP is installed and offering to install it headless if it isn't (`references/playwright-mcp.md`).
+**In scope:** writing CLAUDE.md scaffolding, auditing and surgically updating existing CLAUDE.md files against the current recommendations (step 6, rubric in `references/audit-checklist.md`), seeding `docs/CHANGELOG.md`, optionally wiring git-describe app versioning (step 8, only if the user opts in — per-ecosystem recipes live in `references/app-versioning.md`), checking for the `fix-code` and `git` companion skills and offering to install the missing ones user-level (step 9, opt-in), and — for UI subtrees only — verifying Playwright MCP is installed and offering to install it headless if it isn't (`references/playwright-mcp.md`).
 
 **Out of scope:** creating CONCEPT or ARCHITECTURE (the user does this), building domain skills (use `/skill-creator`), configuring hooks and general MCP-server or plugin management beyond the narrow Playwright-for-UI convenience above (use `update-config`), writing to user-side memory (per-user, not repo-side).

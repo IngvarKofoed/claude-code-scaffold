@@ -2,7 +2,7 @@
 
 A [Claude Code](https://docs.claude.com/en/docs/claude-code) skill that bootstraps a repository's `CLAUDE.md` scaffolding once `docs/CONCEPT.md` and `docs/ARCHITECTURE.md` exist. Writes a root `CLAUDE.md`, a scoped `CLAUDE.md` per major subtree, and seeds `docs/CHANGELOG.md`. It never overwrites an existing `CLAUDE.md` blind: when a file already exists, it **audits** it against the skill's current recommendations, reports per file what's missing or outdated, and asks which files to update — applying surgical, additive edits that preserve your project-specific content.
 
-The opinion behind it: anchoring docs + tight imperative `CLAUDE.md` files + numbered append-only changelog + a code-review-grade self-review that runs automatically after edits (plus a rarely-fired, trigger-gated nudge to run `/code-review` yourself when a change is genuinely risky) is the minimal scaffolding that makes a repo productive to work in with Claude. Domain skills, memory, and hooks are out of scope — add those separately when the project actually needs them.
+The opinion behind it: anchoring docs + tight imperative `CLAUDE.md` files + numbered append-only changelog + a review-grade self-review that runs automatically after edits (preferring the `fix-code` skill when it's installed, inline otherwise) is the minimal scaffolding that makes a repo productive to work in with Claude. Domain skills, memory, and hooks are out of scope — add those separately when the project actually needs them.
 
 ## Add to a project
 
