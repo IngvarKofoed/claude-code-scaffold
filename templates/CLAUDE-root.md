@@ -39,45 +39,44 @@ Each `src/` subtree (or service / package / area) has its own `CLAUDE.md` with s
 - `src/<subtree-a>/CLAUDE.md` — <one-line scope>
 - `src/<subtree-b>/CLAUDE.md` — <one-line scope>
 
-## After making changes
+## Reviewing changes
 
-After a non-trivial edit, **the change gets a real review automatically, in the same turn** — nobody should have to ask for it. Never skip it, and never leave it for a later pass.
+**This repo has exactly one review point: the commit.** Do not review after every edit, and do not run an unrequested review pass mid-session. A pass per prompt costs more than it catches — it only ever sees its own turn's edits, and the next follow-up re-opens what it just looked at.
 
-**Preferred: `/fix-code --fix`, whenever that skill is installed.** It resolves the diff scope itself, rates every finding 1–5 by consequence, has an independent verifier refute each one before repairing, takes a restore point first, and applies the repairs that are both serious and unambiguous. Use it in place of the fallback below — it's better calibrated than an ad-hoc pass, and its edits are reversible via `/fix-code --undo`. Two things it deliberately does *not* do: it leaves severity-1 and -2 findings unrepaired, and it treats style / naming / reuse as `/simplify`'s job and deep security work as `/security-review`'s. Run those separately if the change warrants them.
+What does *not* wait for the commit is verifying your own work: run the tests, the build, and whatever the subtree's `CLAUDE.md` mandates, per change, as always. Deferred here is the *review*, not the checking. Never report a change complete on the grounds that its review comes later.
 
-**Fallback, when `fix-code` isn't installed: run the same review yourself, inline.** A missing skill is never a reason to skip the review — it only changes who performs it.
+The commit is the right moment because it's when the diff is sealed into history, and because it's the first point where the accumulated diff can be read as **one change** — which is what a review needs. Reviewed edit-by-edit, from inside the context that just wrote each one, a review sees the least and repeats its own blind spots.
 
-Scale the fallback review to the change:
+**So when the user asks you to commit (or commit and push) and the working tree holds non-trivial changes, ask before committing** — `AskUserQuestion`, two options:
 
-- **Small, contained edits** — read the diff yourself in one careful pass.
-- **Substantial or complex changes** — fan the review out across **subagents via the Agent tool** (individual agents; this needs no ultracode opt-in — that gate is only for the Workflow tool), **one per dimension that's actually at risk in this diff (typically 2–4)**, then **verify each finding before acting on it**. Review finders run on the strong model; verification can drop a tier (the same tiering as *Multi-agent workflows* below). If the Agent tool isn't available, do the same review yourself in one thorough pass.
+1. **Review first** — review the working diff, apply the repairs, then commit with them included.
+2. **Commit now** — skip the review and go straight to the commit.
 
-Check, across the diff: **correctness, security & data-integrity, edge cases & tests, reuse / duplication, clarity, performance, and conformance to this repo's own conventions** (the CLAUDE.md rules and established patterns). Then **apply every fix to the working tree automatically.**
+**Label option 1 with the path that will actually run**, so the choice is concrete rather than abstract: **"Run `/fix-code --fix`"** when that skill is installed, **"Review inline"** when it isn't. The two differ in cost and calibration — don't hide which one the user is about to get behind a generic label.
 
-Once the fallback's fixes are applied, report what changed (when `/fix-code` ran instead, its own report stands — don't restate it):
+**You** run the pass; the user is only choosing whether it happens. This is the one place the review flow stops to ask — there is no end-of-turn nudge to go run a review elsewhere.
+
+- Ask **once per commit request**, not per round or per file. If the user picks the review, run it, report, then continue to the commit without asking again.
+- **Skip the question** when the diff is trivial — a typo, a version bump, a changelog line — or when a full review pass has already covered this working diff since the last edit. Asking there is noise.
+- **Any** commit request goes through the gate, including a delegated one (`/git commit`, `/git commitandpush`) — check it before handing off, not after. A skill or subagent that does the committing never sees this rule.
+- If the user declines, that's the answer — commit as asked, and don't re-offer or hedge about it afterwards.
+
+### Running the review pass
+
+**Preferred: `/fix-code --fix`, whenever that skill is installed.** It resolves the diff scope itself, rates every finding 1–5 by consequence, has an independent verifier refute each one before repairing, takes a restore point first, and applies the repairs that are both serious and unambiguous — reversible via `/fix-code --undo`. Its own report stands; don't restate it. Two things it deliberately does *not* do: it leaves severity-1 and -2 findings unrepaired, and it treats style / naming / reuse as `/simplify`'s job and deep security work as `/security-review`'s. Run those separately if the change warrants them.
+
+**Fallback, when `fix-code` isn't installed: run the same review yourself, inline over the working diff.** A missing skill doesn't remove the review — it only changes who performs it. Scale it to the diff:
+
+- **Small, contained diff** — read it yourself in one careful pass.
+- **Substantial or complex diff** (what an accumulated multi-round working tree usually is) — fan the review out across **subagents via the Agent tool** (individual agents; this needs no ultracode opt-in — that gate is only for the Workflow tool), **one per dimension that's actually at risk in this diff (typically 2–4)**, then **verify each finding before acting on it**. Review finders run on the strong model; verification can drop a tier (the same tiering as *Multi-agent workflows* below). If the Agent tool isn't available, do the same review yourself in one thorough pass.
+
+Check, across the diff: **correctness, security & data-integrity, edge cases & tests, reuse / duplication, clarity, performance, and conformance to this repo's own conventions** (the CLAUDE.md rules and established patterns). Then **apply every fix to the working tree automatically** and report:
 
 1. **Group the applied fixes by severity** — blockers (correctness bugs, data loss, security), should-fix (clear improvements, missed reuse), nits (style, naming, minor clarity).
 2. **Summarize each bucket in one line** so the user can see what was fixed without expanding every finding.
-3. Do not stop to ask which to fix — all findings are fixed by default. The user can review the diff and revert anything they disagree with.
+3. Do not stop to ask which to fix — all findings are fixed by default. The user can read the diff and revert anything they disagree with.
 
-Say plainly when the change is one you couldn't fully verify — you guessed at intent, left a known gap, or nothing covers it — so the user knows where their own judgement is still needed. State it as a fact about the change, not as a recommendation to run anything.
-
-### Before committing: offer the fresh-eyes pass
-
-An earlier review never covers later edits — each round of non-trivial changes gets its own pass, above, and a follow-up request ("also add X", "now handle Y") is a new change, not a continuation of one already reviewed. What erodes across rounds is your distance from the code: by the second or third follow-up you're reviewing your own patch from inside the context that wrote it, with the same blind spots, and each inline pass only ever saw its own turn's edits. Nothing has read the accumulated diff as one change.
-
-A commit request is where that gets settled, because it's the moment the diff is sealed into history. So **when the user asks you to commit (or commit and push) and the working tree holds non-trivial changes that no `/fix-code --fix` run has seen, ask before committing** — `AskUserQuestion`, two options:
-
-1. **Review first** — run `/fix-code --fix` over the working diff, then commit with its repairs included.
-2. **Commit now** — the per-round reviews stand; go straight to the commit.
-
-**You** run the pass either way; the user is only choosing whether it happens. This is the one place the review flow stops to ask — it replaces any end-of-turn nudge to go run a review, which fires too often to carry signal.
-
-- Only when `fix-code` is installed. Without it, commit as asked — you have no better pass to offer than the ones already run.
-- **Skip the question** when `/fix-code --fix` has already run over this working diff since the last edit (it saw the whole thing), or when the diff is trivial — a typo, a version bump, a changelog line. Asking there is noise.
-- Ask **once per commit request**, not per round or per file. If the user picks the review, run it, report as usual, then continue to the commit without asking again.
-- **Any** commit request goes through the gate, including a delegated one (`/git commit`, `/git commitandpush`) — check it before handing off, not after. A skill or subagent that does the committing never sees this rule.
-- Never let the offer stand in for the work: this round's diff still gets its own review and its fixes before you ask anything.
+Either path closes the same way: say plainly what the review couldn't settle — you guessed at intent, left a known gap, or nothing covers it — so the user knows where their own judgement is still needed. State it as a fact about the change, not as a recommendation to run anything.
 
 ## Multi-agent workflows
 
@@ -91,7 +90,7 @@ The guardrail: the stage that *catches* an unknown problem (review) stays strong
 
 **Invoking a named workflow is not authoring one.** The tiers above are yours to set only when *you* write the `agent()` calls. A built-in or named workflow carries no model overrides of its own, so every stage inherits the session model and a wide fan-out bills every agent at the top tier. Size the run before launching it — how many agents the fan-out implies, given the work it's spread over — rather than planning to retier afterwards; editing the `scriptPath` a run reports is a per-run patch, and resuming re-runs every stage from the edited `agent()` call onward, so the untiered agents get billed twice.
 
-**When a workflow returns, self-review its aggregate diff.** A fan-out edits files across several subagents — often in separate worktrees — so no single agent ever saw the whole combined change. The moment control returns to you, the `## After making changes` self-review applies to the **entire diff the workflow produced**: read it as one coherent change, not per-agent, and apply fixes. A multi-agent change has no single author who saw the whole thing, so this pass matters more here than anywhere else — give it the substantial-change treatment above even when each agent's own slice looked small. (Any review stage *inside* the workflow checks its findings/outputs; it does not replace this pass over the landed diff.)
+**A workflow's aggregate diff is what the review gate is for.** A fan-out edits files across several subagents — often in separate worktrees — so no single agent ever saw the whole combined change, and any review stage *inside* the workflow checked its own findings, not the landed diff. This doesn't earn an extra pass on return; the commit is still the review point. But when the gate asks, say the diff came out of a fan-out — it's where *review first* earns its cost most clearly, and it gets the substantial-diff treatment above even when every agent's own slice looked small.
 
 This section is inert unless you actually run a multi-agent workflow.
 
@@ -105,7 +104,7 @@ This section is inert unless you actually run a multi-agent workflow.
 
 **This setting only chooses *where* commits go — not *when* to make them.** Commit only when the user asks; finishing a change is not a cue to commit it. When you do commit, each commit is one complete change including its `docs/CHANGELOG.md` entry — never leave the tree half-committed.
 
-A commit request first passes through *Before committing: offer the fresh-eyes pass* above — check that gate before staging anything.
+A commit request first passes through the review gate in *Reviewing changes* above — check it before staging anything.
 
 <!-- Add additional sections below as the project develops:
   - Project-specific forcing rules (e.g., "Check in with the user before making CSS / layout / UX changes")

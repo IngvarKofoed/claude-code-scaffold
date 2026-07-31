@@ -101,9 +101,9 @@ For every `CLAUDE.md` set aside in step 4 because it already existed, run an aud
 
 **b. Present findings, grouped by file.** One scannable line per finding: the item, its classification, and a few words of why it matters — e.g.:
 
-> **`CLAUDE.md` (root)** — 2 findings
-> - *Outdated:* per-edit review mandate defers the pass to a review tool the agent is told to invoke — current convention is a self-review of the diff, auto-fix all, report grouped by severity.
-> - *Outdated:* ends every turn nudging the user toward a separate review pass — current convention drops the nudge and just states what couldn't be verified.
+> **`CLAUDE.md` (root)** — 3 findings
+> - *Outdated:* reviews after every non-trivial edit — current convention is one review point, at the commit, so the accumulated diff is read as one change instead of a pass per prompt.
+> - *Outdated:* ends every turn nudging the user toward a separate review pass — current convention drops the nudge; the commit gate is the one place it asks.
 > - *Outdated:* changelog section is missing the archive + globally-unique-numbers rule.
 >
 > **`src/web/CLAUDE.md`** — 1 finding
@@ -158,7 +158,7 @@ The root CLAUDE.md this skill writes *prefers* two skills but never depends on t
 
 | Skill | Install as | What the scaffolding uses it for | Repo |
 | --- | --- | --- | --- |
-| `fix-code` | `~/.claude/skills/fix-code/` | The preferred after-edits review (`/fix-code --fix`) in root CLAUDE.md. Without it the agent falls back to the inline review — correct, just less calibrated. | `https://github.com/IngvarKofoed/claude-code-fix-code` |
+| `fix-code` | `~/.claude/skills/fix-code/` | The review the root CLAUDE.md prefers at its commit gate (`/fix-code --fix`). Without it the agent falls back to the same review inline — correct, just less calibrated. | `https://github.com/IngvarKofoed/claude-code-fix-code` |
 | `git` | `~/.claude/skills/git/` | Commit/push delegated to a cheap Haiku subagent, keeping the main session's context and cost down. | `https://github.com/IngvarKofoed/claude-code-git` |
 
 **a. Detect what's already there.** A skill counts as installed if it appears in your own available-skills listing, or if `~/.claude/skills/fix-code/` / `~/.claude/skills/git/` exists — the **short** names, not the repo names. **If both are installed, skip this step in silence** — no question, no mention in the summary.
@@ -188,8 +188,8 @@ Print a short summary listing:
 - Reminders:
   - **Subtree CLAUDE.md tools, test framework, and verification workflow** were filled in from the project (package manifest + architecture). Required skills reflect the choices you made per subtree in step 5 — anything you didn't pick was left out. Skim and adjust.
   - **If you installed or reconfigured Playwright MCP during this run** (`references/playwright-mcp.md`), restart Claude Code or reconnect via `/mcp` before relying on the UI verification workflow — the new `mcp__playwright__*` tools aren't loaded in the current session yet.
-  - **Review after edits is built in** — root CLAUDE.md has the agent review its own changes automatically and auto-fix what it finds. It prefers `/fix-code --fix` when that skill is installed, and otherwise does the same job inline (a single careful pass for small edits; a subagent fan-out via the Agent tool, findings verified, for substantial ones), reporting grouped by severity. Either way it closes by stating plainly anything it couldn't fully verify — a guessed intent, a known gap, an uncovered path. The fallback needs nothing installed, so the mandate never goes dead.
-  - **Commits pass through a review gate** — when you ask the agent to commit and non-trivial changes have piled up since the last full pass, it asks first whether to run `/fix-code --fix` over the working diff or commit as-is, then runs your choice. Only when `fix-code` is installed, and skipped for trivial diffs or when a full pass already covered the tree. Successive rounds of edits each get reviewed on their own, but nothing reads the accumulated diff as one change until then — the commit is where that's worth settling.
+  - **Review happens once, at the commit — not after every edit.** Deliberately: a pass per prompt only ever sees its own turn's edits and costs more than it catches. When you ask the agent to commit and the working tree holds non-trivial changes, it asks first whether to review the working diff or commit as-is, then runs your choice itself — `/fix-code --fix` when that skill is installed, the same review inline otherwise (one careful read for a small diff; a subagent fan-out via the Agent tool, findings verified, for a big one), auto-fixing what it finds, reporting grouped by severity, and closing with whatever it couldn't fully verify. The fallback needs nothing installed, so the gate never goes dead.
+  - **What the gate does *not* defer** — tests, build, and each subtree's own verification workflow still run per change. Only the review waits for the commit. The gate is skipped for trivial diffs and for a diff a full pass already covered, asked once per commit request, and checked before any delegated commit (`/git commit`) hands off.
   - The root CLAUDE.md also carries a **multi-agent workflow ("ultracode") cost-tiering** rule — tier subagent model + effort to the work, keeping review and hard-reasoning stages on the strong model (verifying concrete findings can drop to the mid model). Inert unless the agent runs the Workflow tool.
   - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
 
