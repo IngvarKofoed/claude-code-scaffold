@@ -22,6 +22,7 @@ Every change you make to this repository must be recorded in `docs/CHANGELOG.md`
 - Keep each entry to **1–5 lines, ~20 words per line at most**. The changelog is read at session start to orient — that only works if it stays scannable. The failure mode to avoid is cramming everything onto one unbroken line: a 40-word run-on isn't a short entry, it just hides the bulk on a single line. Break it into a few short lines instead; and if it sprawls past ~5 lines, that's a signal it's really several changes — give each its own numbered entry.
 - Write the entry as part of the same change. Do not batch multiple changes into one entry, and do not skip entries.
 - When a phase/increment completes, its per-task entries move to `docs/CHANGELOG-archive.md`, leaving only the milestone summary in `docs/CHANGELOG.md`. Numbers are globally unique across both files — never reuse one that already appears in either.
+- **When more than one change can be in flight at once** — parallel worktrees, or open PRs — numbers are claimed by **landing order, not writing order**. Two changes written in parallel both reach for the same next number, so before landing, renumber your entries past the highest number now in `main`; if `main` moves again before you land, redo it. The collision surfaces as a conflict at the end of the file: resolve it by keeping both sides and renumbering the incoming entries — never by dropping either side, and never by reusing a number.
 
 Same change, bad vs. good entry:
 
@@ -96,15 +97,38 @@ This section is inert unless you actually run a multi-agent workflow.
 
 ## Git workflow
 
-<Keep the one mode that matches this repo; delete the other and this note.>
+<Keep the one mode that matches this repo; delete the others and this note. A mode runs from its **bolded name** to the next one — the worktree mode is several paragraphs, not one line.>
 
 **Direct to `main`** — when you commit, commit straight to `main`; don't open branches or PRs unless asked. <Push policy, e.g. push after each commit, or leave pushing to the user.>
+
+**Direct to `main`, parallel work in worktrees** — every change lands on `main`. Never push any branch but `main`, and don't open a PR unless asked. <Push policy for `main`, e.g. push after each commit, or leave pushing to the user.>
+
+Parallel features each get their own **git worktree**, on a short-lived local branch (`wt/<slug>`) that exists only to back it: never pushed, and deleted along with its worktree once you're finished with it. But landing is not finishing: after a fast-forward `wt/<slug>` and `main` are the same commit, and continuing to commit on that branch is normal. Drift is a landed branch nobody is working in any more. Starting parallel work means creating a worktree — never run two sessions against the same checkout. <Where worktrees live, e.g. `../<repo>.wt/<slug>` or `.claude/worktrees/<slug>` — if inside the repo, it must be gitignored; and any local setup that doesn't carry into a fresh one — `.env`, installed dependencies, build caches — and so has to be re-run there.>
+
+**What counts as a landing.** In this mode "push" can only mean `main`, so **"commit and push" means land it** — the words sound smaller than the action, so say which you're doing. A bare "commit" does not: that's a checkpoint on `wt/<slug>`, which still passes the review gate and then stops there.
+
+**Landing.** The commit on `wt/<slug>` is the review point; everything after it is mechanical and gets no second pass. You **cannot** update `main` from inside the worktree — both `git push . HEAD:main` and `git branch -f main HEAD` are refused while `main` is checked out elsewhere — so drive the main checkout with `git -C` instead. The session never has to move:
+
+1. **In the worktree:** `git merge main`, resolve the conflicts (the changelog renumbering happens here), **then** commit. Resolving after the commit puts that work outside the reviewed diff, and merging `main` in first is also what makes step 2 a fast-forward — `--ff-only` fails outright once `main` has moved.
+2. **Land it:** `git -C <main-checkout> merge --ff-only wt/<slug>`, then push per the policy above.
+3. **Tear down — if the worktree isn't being kept (see below), and from the main checkout:** `git worktree remove <worktree-path>`, then `git branch -d wt/<slug>` — in that order, since the branch can't be deleted while its worktree exists. Two traps: `git worktree remove` run from *inside* the worktree succeeds by deleting your own working directory out from under you, and every command after it fails; and `rm -rf` on the directory leaves the worktree registered and the branch undeletable until `git worktree prune`.
+
+**A landing asks two things — in one `AskUserQuestion`, not two stops.** The gate's one-ask-per-commit-request rule still holds; the second question rides along in the same prompt: the review question from *Reviewing changes*, and what happens to the worktree once the work is on `main`.
+
+- **Keep working here** — nothing is torn down. The branch stays and keeps taking commits. Do **not** call `ExitWorktree`: its `keep` returns the session to the original directory, which is the opposite of staying.
+- **Remove the worktree** — run step 3. The session leaves the worktree and the next prompt runs in the main checkout; put that in the option label, because this relocates the session rather than just tidying up.
+
+**Keep is the default** — removal costs rebuilding whatever local setup doesn't carry into a fresh worktree; keeping only costs disk. **Skip the question** when the user already said which they want. **Don't offer removal at all** while anything in the worktree isn't landed — uncommitted changes, untracked files, commits not on `main`: keep it and say why. If the review reported something it couldn't settle, keep regardless and say so.
+
+**If the session entered the worktree with `EnterWorktree`** — and this section is the project instruction that authorizes using it — note that it branches from `origin/<default-branch>` unless `worktree.baseRef` is `head`, so local unpushed `main` commits aren't in there. **Land before exiting:** `ExitWorktree` with `remove` refuses while the branch holds commits that aren't on the original branch, and the only way through that refusal is `discard_changes`, which destroys the work. Land first, then `remove` — and only when that's the answer to the question above; if the answer was to keep working, don't call it at all. Its `keep` action is for stepping out of a worktree you intend to return to in a later session.
+
+The worktrees a multi-agent fan-out creates are **not** this: they're ephemeral, they don't commit, and their edits land in the parent tree to pass a single gate there.
 
 **Branch + PR** — never commit directly to `main`. For each change: branch from `main` (`<naming, e.g. feat/<slug>>`), commit, push, then open a PR. <Who/what merges; note here if `main` is protected.>
 
 **This setting only chooses *where* commits go — not *when* to make them.** Commit only when the user asks; finishing a change is not a cue to commit it. When you do commit, each commit is one complete change including its `docs/CHANGELOG.md` entry — never leave the tree half-committed.
 
-A commit request first passes through the review gate in *Reviewing changes* above — check it before staging anything.
+A commit request first passes through the review gate in *Reviewing changes* above — check it before staging anything, wherever the commit is being made: a commit inside a worktree is still a commit.
 
 <!-- Add additional sections below as the project develops:
   - Project-specific forcing rules (e.g., "Check in with the user before making CSS / layout / UX changes")
