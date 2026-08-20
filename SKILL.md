@@ -141,7 +141,7 @@ If `docs/CHANGELOG-DIGEST.md` doesn't exist, create it with this header:
 
 Curated milestones and decisions a future session must not re-litigate. One to three lines each, naming the entry's slug in `docs/changelog/`. This file stays in required reading, so keep it small: when it passes ~100 lines, tighten the older half rather than growing it.
 
-Full history is one file per change in `docs/changelog/`, named `YYYY-MM-DD-<slug>.md`. Each is a bounded lead (1–5 lines, ~20 words per line) written as durable project memory — what is now true that wasn't before, plus the why in a clause when it isn't obvious, not a recap of the diff — over an optional detail section for what the diff can't carry. A landed entry file is never renamed, moved, or deleted: its path is its address.
+Full history is one file per change in `docs/changelog/`, named `YYYY-MM-DD-<slug>.md`. Each is a bounded lead (1–5 lines, ~20 words per line) written as durable project memory — what is now true that wasn't before, plus the why in a clause when it isn't obvious, not a recap of the diff — over a detail section, owed whenever the change leaves something the diff can't carry (an alternative rejected, a constraint that still binds, a known limit, a gap the verification didn't cover), never restating the lead, ~40 lines at most. A landed entry file is never renamed, moved, or deleted: its path is its address.
 
 ```
 
