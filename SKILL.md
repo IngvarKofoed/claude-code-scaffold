@@ -56,7 +56,7 @@ Read the template at `templates/CLAUDE-root.md` in this skill's folder.
 Fill placeholders:
 - **Project name** — read it from `package.json`, `pyproject.toml`, `*.csproj`, `Cargo.toml`, or ask the user.
 - **Nested guidance pointers** — replace the example lines with the actual subtree paths from step 3, each with a one-line scope description (ask the user for the scope line if you can't infer it).
-- **Git workflow** — ask the user one question, with three options: commit directly to `main`; commit to `main` with parallel work isolated in **git worktrees**; or branch and open a PR per change. This can't be inferred reliably, so always ask. Keep the matching mode in the Git workflow section and delete the other two. Both direct-to-`main` modes need the push policy. If they pick branches, also capture the branch-naming convention and whether `main` is protected; if worktrees, capture where worktrees live — and if that's inside the repo (e.g. `.claude/worktrees/`, where `EnterWorktree` puts them), check it's gitignored and add it if not — plus what local setup (`.env`, dependencies, build caches) doesn't carry into a fresh one. The worktree and Branch+PR modes both keep the changelog's **parallel-landing** bullet — delete that bullet only for plain direct-to-`main`, where nothing else is ever in flight to collide with. (This overrides only the *where* half of the agent's generic default, "branch first" — it must **not** override the *when* half, "commit only when asked." Keep the template's note that the mode chooses where commits go, not when, or the agent reads "direct to `main`" as license to commit proactively the moment a change is done.)
+- **Git workflow** — ask the user one question, with three options: commit directly to `main`; commit to `main` with parallel work isolated in **git worktrees**; or branch and open a PR per change. This can't be inferred reliably, so always ask. Keep the matching mode in the Git workflow section and delete the other two. Both direct-to-`main` modes need the push policy. If they pick branches, also capture the branch-naming convention and whether `main` is protected; if worktrees, capture where worktrees live — and if that's inside the repo (e.g. `.claude/worktrees/`, where `EnterWorktree` puts them), check it's gitignored and add it if not — plus what local setup (`.env`, dependencies, build caches) doesn't carry into a fresh one. The worktree and Branch+PR modes both keep the changelog's **fragment** bullet — entries are written to `docs/changelog.d/<slug>.md` on the branch and folded into `docs/CHANGELOG.md` at landing. Delete that bullet only for plain direct-to-`main`, where nothing else is ever in flight to collide with, and where entries go straight into `docs/CHANGELOG.md`. When you delete it, also trim the two clauses that point at it — "or staged in a fragment first where the parallel-work bullet below applies" in the Changelog discipline lead, and "or into the fragment where the mode above uses one" in the where-not-when paragraph — or the file ends up referring to a bullet and a mode that aren't in it. (This overrides only the *where* half of the agent's generic default, "branch first" — it must **not** override the *when* half, "commit only when asked." Keep the template's note that the mode chooses where commits go, not when, or the agent reads "direct to `main`" as license to commit proactively the moment a change is done.)
 
 Write to `<repo-root>/CLAUDE.md`.
 
@@ -115,6 +115,8 @@ If nothing is outdated anywhere, say so plainly and move on — don't invent wor
 
 **c. Ask which files to update.** One consolidated prompt offering the files that have findings — the user replies `all`, `none`, or a subset. Let them narrow within a file too ("just the changelog fix in root"). A file with no findings isn't offered.
 
+One exception to narrowing: the **changelog-fragment migration** spans R3 and R6 in the same file, and half of it is worse than neither. R3 alone routes entries to a fragment that the old landing sequence never folds *or* deletes, so the fragment rides onto `main` and the entry is never numbered. Offer the two as a single item, and if the user tries to split them, say why and take both or neither.
+
 **d. Apply surgically to the chosen files.** Follow the "Applying updates" rules in `references/audit-checklist.md`: add Missing sections (filled from the project, not raw placeholders), rewrite Outdated sections to the current intent while keeping surrounding project-specific wording, fix Stale items, and **never delete custom sections the template never had**. Show the diff and confirm before writing each file. Files the user didn't pick are left exactly as-is.
 
 ### 7. Seed `docs/CHANGELOG.md`
@@ -124,13 +126,15 @@ If `docs/CHANGELOG.md` doesn't exist, create it with this five-line header so th
 ```markdown
 # Changelog
 
-Each entry is numbered with a monotonically increasing integer. Append new entries to the end. Never reuse or reorder numbers. Numbers are globally unique across this file and any future `CHANGELOG-archive.md` — never reused. Write each entry as durable project memory: what is now true that wasn't before, plus the why in a clause when not obvious — not a recap of the diff (filenames and mechanical edits live there). Keep it to 1–5 lines, ~20 words per line at most; never one packed run-on line.
+Each entry is numbered with a monotonically increasing integer. Append new entries to the end — unless root CLAUDE.md puts a fragment rule in front of this file, in which case entries reach it only through that fold. Never reuse or reorder numbers. Numbers are globally unique across this file and any future `CHANGELOG-archive.md` — never reused. Write each entry as durable project memory: what is now true that wasn't before, plus the why in a clause when not obvious — not a recap of the diff (filenames and mechanical edits live there). Keep it to 1–5 lines, ~20 words per line at most; never one packed run-on line.
 
 ```
 
 The full discipline rule lives in root CLAUDE.md (step 4 wrote it, or step 6 brought it current). The file itself just needs to exist.
 
 If `docs/CHANGELOG.md` already exists, leave it alone.
+
+**Do not create `docs/changelog.d/`**, even when the git mode uses fragments. It is meant to be empty on `main` — git can't track an empty directory, and a `.gitkeep` in there would be a permanent lie about the fold having run. The first branch that needs it creates it.
 
 ### 8. Offer git-describe app versioning (optional)
 
