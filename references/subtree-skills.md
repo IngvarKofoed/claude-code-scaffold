@@ -13,7 +13,7 @@ A short, opinionated catalog of Claude Code ecosystem items the `scaffold` skill
 Two things explicitly *not* covered here, because the scaffold skill picks them from elsewhere:
 
 - **Language servers from the package manifest** — picked by reading `package.json` / `*.csproj` / etc.
-- **The review pass** — mandated globally from root CLAUDE.md and run once per commit at its review gate (`/fix-code --fix` when that skill is installed, an inline review-grade pass otherwise; either way it auto-fixes), never per-subtree.
+- **The review pass** — mandated globally from root CLAUDE.md and run once per commit at its review gate (`/code-review high --fix` or `/fix-code --fix`, the user's pick at the gate, with an inline review-grade pass standing in when `fix-code` isn't installed; every path auto-fixes), never per-subtree.
 
 ## How the skill uses the catalog
 

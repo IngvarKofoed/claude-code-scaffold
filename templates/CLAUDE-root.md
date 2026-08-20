@@ -48,25 +48,30 @@ What does *not* wait for the commit is verifying your own work: run the tests, t
 
 The commit is the right moment because it's when the diff is sealed into history, and because it's the first point where the accumulated diff can be read as **one change** — which is what a review needs. Reviewed edit-by-edit, from inside the context that just wrote each one, a review sees the least and repeats its own blind spots.
 
-**So when the user asks you to commit (or commit and push) and the working tree holds non-trivial changes, ask before committing** — `AskUserQuestion`, two options:
+**So when the user asks you to commit (or commit and push) and the working tree holds non-trivial changes, ask before committing** — `AskUserQuestion`, three options in this order:
 
-1. **Review first** — review the working diff, apply the repairs, then commit with them included.
-2. **Commit now** — skip the review and go straight to the commit.
+1. **`/code-review high --fix`** — the deep pass: broad coverage, correctness plus reuse / simplification / efficiency, repairs applied to the working tree.
+2. **`/fix-code --fix`** — the tight pass: every finding rated by consequence and independently verified, only the serious and unambiguous ones repaired.
+3. **Commit now** — skip the review and go straight to the commit.
 
-**Label option 1 with the path that will actually run**, so the choice is concrete rather than abstract: **"Run `/fix-code --fix`"** when that skill is installed, **"Review inline"** when it isn't. The two differ in cost and calibration — don't hide which one the user is about to get behind a generic label.
+The first two are both real reviews; they differ in breadth and cost, not in whether the change gets looked at. **Option 1 leads because it catches the most** — recommend it for the diff this gate usually sees (accumulated over several rounds, or landed by a fan-out), and option 2 when the diff is small, contained, and already well understood.
 
-**You** run the pass; the user is only choosing whether it happens. This is the one place the review flow stops to ask — there is no end-of-turn nudge to go run a review elsewhere.
+**Label each option with the path that will actually run**, so the choice is concrete rather than abstract. `/code-review` ships with the harness, so option 1 is always available exactly as written — keep the explicit `high`, because without a level the command silently reuses whatever level was typed last. `/fix-code` is an installed skill: when it isn't present, option 2 becomes **"Review inline"** and you run that review yourself. Don't hide which of these the user is about to get behind a generic label — they differ in cost and in calibration.
 
-- Ask **once per commit request**, not per round or per file. If the user picks the review, run it, report, then continue to the commit without asking again.
+**You** run the pass; the user is only choosing whether it happens and how deep it goes. This is the one place the review flow stops to ask — there is no end-of-turn nudge to go run a review elsewhere.
+
+- Ask **once per commit request**, not per round or per file. If the user picks a review, run it, report, then continue to the commit without asking again.
 - **Skip the question** when the diff is trivial — a typo, a version bump, a changelog line — or when a full review pass has already covered this working diff since the last edit. Asking there is noise.
 - **Any** commit request goes through the gate, including a delegated one (`/git commit`, `/git commitandpush`) — check it before handing off, not after. A skill or subagent that does the committing never sees this rule.
-- If the user declines, that's the answer — commit as asked, and don't re-offer or hedge about it afterwards.
+- If the user picks *Commit now*, that's the answer — commit as asked, and don't re-offer or hedge about it afterwards.
 
 ### Running the review pass
 
-**Preferred: `/fix-code --fix`, whenever that skill is installed.** It resolves the diff scope itself, rates every finding 1–5 by consequence, has an independent verifier refute each one before repairing, takes a restore point first, and applies the repairs that are both serious and unambiguous — reversible via `/fix-code --undo`. Its own report stands; don't restate it. Two things it deliberately does *not* do: it leaves severity-1 and -2 findings unrepaired, and it treats style / naming / reuse as `/simplify`'s job and deep security work as `/security-review`'s. Run those separately if the change warrants them.
+**Option 1 — `/code-review high --fix`.** It reviews the current diff at high effort: broader coverage than the lower levels, including findings it isn't fully certain of, which is what you want at a gate that fires once per commit. Its brief is wider than option 2's — correctness bugs *and* reuse / simplification / efficiency cleanups in the same pass — and `--fix` applies what it finds to the working tree after the review. Its own report stands; don't restate it. Being the broader path, it will also repair things option 2 would have deliberately left alone, so read the resulting diff before committing rather than assuming every edit was a blocker.
 
-**Fallback, when `fix-code` isn't installed: run the same review yourself, inline over the working diff.** A missing skill doesn't remove the review — it only changes who performs it. Scale it to the diff:
+**Option 2 — `/fix-code --fix`, whenever that skill is installed.** It resolves the diff scope itself, rates every finding 1–5 by consequence, has an independent verifier refute each one before repairing, takes a restore point first, and applies the repairs that are both serious and unambiguous — reversible via `/fix-code --undo`. Its own report stands; don't restate it. Two things it deliberately does *not* do: it leaves severity-1 and -2 findings unrepaired, and it treats style / naming / reuse as `/simplify`'s job and deep security work as `/security-review`'s. Run those separately if the change warrants them.
+
+**When `fix-code` isn't installed, option 2 is that same review run by you, inline over the working diff.** A missing skill doesn't remove the review — it only changes who performs it. Scale it to the diff:
 
 - **Small, contained diff** — read it yourself in one careful pass.
 - **Substantial or complex diff** (what an accumulated multi-round working tree usually is) — fan the review out across **subagents via the Agent tool** (individual agents; this needs no ultracode opt-in — that gate is only for the Workflow tool), **one per dimension that's actually at risk in this diff (typically 2–4)**, then **verify each finding before acting on it**. Review finders run on the strong model; verification can drop a tier (the same tiering as *Multi-agent workflows* below). If the Agent tool isn't available, do the same review yourself in one thorough pass.
@@ -77,7 +82,7 @@ Check, across the diff: **correctness, security & data-integrity, edge cases & t
 2. **Summarize each bucket in one line** so the user can see what was fixed without expanding every finding.
 3. Do not stop to ask which to fix — all findings are fixed by default. The user can read the diff and revert anything they disagree with.
 
-Either path closes the same way: say plainly what the review couldn't settle — you guessed at intent, left a known gap, or nothing covers it — so the user knows where their own judgement is still needed. State it as a fact about the change, not as a recommendation to run anything.
+Every path closes the same way: say plainly what the review couldn't settle — you guessed at intent, left a known gap, or nothing covers it — so the user knows where their own judgement is still needed. State it as a fact about the change, not as a recommendation to run anything.
 
 ## Multi-agent workflows
 
@@ -91,7 +96,7 @@ The guardrail: the stage that *catches* an unknown problem (review) stays strong
 
 **Invoking a named workflow is not authoring one.** The tiers above are yours to set only when *you* write the `agent()` calls. A built-in or named workflow carries no model overrides of its own, so every stage inherits the session model and a wide fan-out bills every agent at the top tier. Size the run before launching it — how many agents the fan-out implies, given the work it's spread over — rather than planning to retier afterwards; editing the `scriptPath` a run reports is a per-run patch, and resuming re-runs every stage from the edited `agent()` call onward, so the untiered agents get billed twice.
 
-**A workflow's aggregate diff is what the review gate is for.** A fan-out edits files across several subagents — often in separate worktrees — so no single agent ever saw the whole combined change, and any review stage *inside* the workflow checked its own findings, not the landed diff. This doesn't earn an extra pass on return; the commit is still the review point. But when the gate asks, say the diff came out of a fan-out — it's where *review first* earns its cost most clearly, and it gets the substantial-diff treatment above even when every agent's own slice looked small.
+**A workflow's aggregate diff is what the review gate is for.** A fan-out edits files across several subagents — often in separate worktrees — so no single agent ever saw the whole combined change, and any review stage *inside* the workflow checked its own findings, not the landed diff. This doesn't earn an extra pass on return; the commit is still the review point. But when the gate asks, say the diff came out of a fan-out — it's where the deep pass earns its cost most clearly, so recommend option 1 there, and if the review falls to the inline path it gets the substantial-diff treatment above even when every agent's own slice looked small.
 
 This section is inert unless you actually run a multi-agent workflow.
 
