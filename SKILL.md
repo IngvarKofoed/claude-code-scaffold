@@ -1,11 +1,11 @@
 ---
 name: scaffold
-description: "Bootstrap a repository's CLAUDE.md scaffolding once `docs/CONCEPT.md` and `docs/ARCHITECTURE.md` already exist. Use this skill when the user says any of: 'scaffold this repo', 'set up CLAUDE.md', 'bootstrap this repo for Claude', 'initialize the agent scaffolding', 'create the CLAUDE.md files', 'wire up the CLAUDE.md', or any phrasing that implies a fresh repo needs its CLAUDE.md files written now that the anchoring docs are done. Also triggers on 'I've written my CONCEPT and ARCHITECTURE, now what?' or 'create root and subtree CLAUDE.md'. Writes root + per-subtree CLAUDE.md from templates in this skill's folder, seeds an empty `docs/CHANGELOG.md`, optionally wires git-describe app versioning, prints next steps. When CLAUDE.md files already exist it never overwrites blind: it audits each one against this skill's current recommendations, reports per file what's missing or outdated (e.g. an old review mandate, a changelog section without the numbering rule), and asks which files to bring up to date — applying only surgical, additive updates that preserve project-specific content. So also trigger this skill on 'audit my CLAUDE.md', 'are my CLAUDE.md files up to date', 'check my CLAUDE.md against the latest recommendations / scaffold conventions', or 'update CLAUDE.md to the current conventions'."
+description: "Bootstrap a repository's CLAUDE.md scaffolding once `docs/CONCEPT.md` and `docs/ARCHITECTURE.md` already exist. Use this skill when the user says any of: 'scaffold this repo', 'set up CLAUDE.md', 'bootstrap this repo for Claude', 'initialize the agent scaffolding', 'create the CLAUDE.md files', 'wire up the CLAUDE.md', or any phrasing that implies a fresh repo needs its CLAUDE.md files written now that the anchoring docs are done. Also triggers on 'I've written my CONCEPT and ARCHITECTURE, now what?' or 'create root and subtree CLAUDE.md'. Writes root + per-subtree CLAUDE.md from templates in this skill's folder, seeds `docs/CHANGELOG-DIGEST.md` for the per-entry `docs/changelog/` convention, optionally wires git-describe app versioning, prints next steps. When CLAUDE.md files already exist it never overwrites blind: it audits each one against this skill's current recommendations, reports per file what's missing or outdated (e.g. an old review mandate, a changelog section still on the retired single-file numbered scheme), and asks which files to bring up to date — applying only surgical, additive updates that preserve project-specific content. So also trigger this skill on 'audit my CLAUDE.md', 'are my CLAUDE.md files up to date', 'check my CLAUDE.md against the latest recommendations / scaffold conventions', or 'update CLAUDE.md to the current conventions'."
 ---
 
 # scaffold
 
-Short bootstrap helper. Run on a repo that already has `docs/CONCEPT.md` and `docs/ARCHITECTURE.md`. Writes the minimal CLAUDE.md scaffolding — root + per-subtree — and seeds the changelog. Stops there. Domain skills, memory, hooks are out of scope.
+Short bootstrap helper. Run on a repo that already has `docs/CONCEPT.md` and `docs/ARCHITECTURE.md`. Writes the minimal CLAUDE.md scaffolding — root + per-subtree — and seeds the changelog digest. Stops there. Domain skills, memory, hooks are out of scope.
 
 Works in two modes per target file, decided automatically:
 - **Scaffold** — the `CLAUDE.md` doesn't exist yet → write it from the template (steps 4–5).
@@ -62,7 +62,7 @@ Fill placeholders:
 
   **(b) Is work here ever isolated in a git worktree?** Yes/no — and *yes* is compatible with **either** answer to (a). This is the question that used to be folded into (a) as a third mode, which was wrong: a repo that normally commits straight to `main` and *sometimes* moves a piece of work into a worktree wants both behaviours, selected per session by where the session actually is, not one convention chosen once at scaffold time. On *yes*, keep the *Working in a worktree* subsection — and trim it to the mode chosen in (a), because it is written to serve both: drop the *Landing under `Direct to main`* steps and their keep/remove references for a Branch+PR repo, drop the *Landing under `Branch + PR`* paragraph for a direct-to-`main` repo, and remove the now-dead "Under *<other mode>*" clauses in the branch-naming and what-counts-as-a-landing paragraphs. Capture where worktrees live — and if that's inside the repo (e.g. `.claude/worktrees/`, where `EnterWorktree` puts them), check it's gitignored and add it if not — plus what local setup (`.env`, dependencies, build caches) doesn't carry into a fresh one. On *no*, delete that whole subsection.
 
-  **The changelog fragment bullet is kept if Branch+PR *or* worktrees are in play** — entries are written to `docs/changelog.d/<slug>.md` while on a branch or in a worktree, and folded into `docs/CHANGELOG.md` at landing. Delete it only for direct-to-`main` **with no worktrees**, the one combination where every commit is made on `main` in the main checkout and nothing can be in flight ahead of it. When you delete it, also trim the two clauses that point at it — "or staged in a fragment first where the fragment bullet below applies" in the Changelog discipline lead, and "or into the fragment where you're on a branch or in a worktree" in the where-not-when paragraph — or the file ends up referring to a bullet that isn't in it.
+  **Neither answer touches the Changelog discipline section.** The entry file is written the same way on `main`, on a branch and in a worktree, so nothing in that section is mode-dependent and there is nothing to keep or trim there. Don't add a conditional to it.
 
   (This overrides only the *where* half of the agent's generic default, "branch first" — it must **not** override the *when* half, "commit only when asked." Keep the template's note that the mode chooses where commits go, not when, or the agent reads "direct to `main`" as license to commit proactively the moment a change is done.)
 
@@ -115,7 +115,7 @@ For every `CLAUDE.md` set aside in step 4 because it already existed, run an aud
 > **`CLAUDE.md` (root)** — 3 findings
 > - *Outdated:* reviews after every non-trivial edit — current convention is one review point, at the commit, so the accumulated diff is read as one change instead of a pass per prompt.
 > - *Outdated:* ends every turn nudging the user toward a separate review pass — current convention drops the nudge; the commit gate is the one place it asks.
-> - *Outdated:* changelog section is missing the archive + globally-unique-numbers rule.
+> - *Outdated:* changelog section is on the retired single-file numbered scheme, and this repo has an archive file — offered as the one migration item.
 >
 > **`src/web/CLAUDE.md`** — 1 finding
 > - *Missing:* no browser-driven verification workflow for a UI subtree.
@@ -126,26 +126,32 @@ If nothing is outdated anywhere, say so plainly and move on — don't invent wor
 
 **c. Ask which files to update.** One consolidated prompt offering the files that have findings — the user replies `all`, `none`, or a subset. Let them narrow within a file too ("just the changelog fix in root"). A file with no findings isn't offered.
 
-One exception to narrowing: the **changelog-fragment migration** spans R3 and whichever section carries the landing sequence — R6 for a Branch+PR file, R6b once a worktree subsection is in play — in the same file, and half of it is worse than neither. R3 alone routes entries to a fragment that the old landing sequence never folds *or* deletes, so the fragment rides onto `main` and the entry is never numbered. Offer the two as a single item, and if the user tries to split them, say why and take both or neither.
+One exception to narrowing: the **changelog-layout migration** spans R1, R3, whichever section carries the landing sequence (R6 for a Branch+PR file, R6b once a worktree subsection is in play), the backfill of every existing entry into per-entry files, and the digest distilled from that same pass — and half of it is worse than neither. R3 alone routes entries into `docs/changelog/` while R1 still requires reading a file nothing writes, so new entries are invisible at session start; the landing sequence left alone still folds a fragment into a file nothing appends to; and the layout without the distillation drops the history from required reading and leaves an empty digest in its place. Offer it as a single item, priced (see R3's migration in the checklist — the distillation is the expensive step and gets delegated), and if the user tries to split it, say why and take all or none.
 
 **d. Apply surgically to the chosen files.** Follow the "Applying updates" rules in `references/audit-checklist.md`: add Missing sections (filled from the project, not raw placeholders), rewrite Outdated sections to the current intent while keeping surrounding project-specific wording, fix Stale items, and **never delete custom sections the template never had**. Show the diff and confirm before writing each file. Files the user didn't pick are left exactly as-is.
 
-### 7. Seed `docs/CHANGELOG.md`
+### 7. Seed `docs/CHANGELOG-DIGEST.md`
 
-If `docs/CHANGELOG.md` doesn't exist, create it with this five-line header so the agent has somewhere to write entries:
+The changelog is a folder of per-entry files, `docs/changelog/YYYY-MM-DD-<slug>.md`. Nothing needs seeding for that. What does need seeding is the digest, because it is `@`-referenced in required reading from the first session — a dangling `@`-reference is worse than an empty file.
+
+If `docs/CHANGELOG-DIGEST.md` doesn't exist, create it with this header:
 
 ```markdown
-# Changelog
+# Changelog digest
 
-Each entry is numbered with a monotonically increasing integer. Append new entries to the end — unless root CLAUDE.md puts a fragment rule in front of this file, in which case entries reach it only through that fold. Never reuse or reorder numbers. Numbers are globally unique across this file and any future `CHANGELOG-archive.md` — never reused. Write each entry as durable project memory: what is now true that wasn't before, plus the why in a clause when not obvious — not a recap of the diff (filenames and mechanical edits live there). Keep it to 1–5 lines, ~20 words per line at most; never one packed run-on line.
+Curated milestones and decisions a future session must not re-litigate. One to three lines each, naming the entry's slug in `docs/changelog/`. This file stays in required reading, so keep it small: when it passes ~100 lines, tighten the older half rather than growing it.
+
+Full history is one file per change in `docs/changelog/`, named `YYYY-MM-DD-<slug>.md`. Each is a bounded lead (1–5 lines, ~20 words per line) written as durable project memory — what is now true that wasn't before, plus the why in a clause when it isn't obvious, not a recap of the diff — over an optional detail section for what the diff can't carry. A landed entry file is never renamed, moved, or deleted: its path is its address.
 
 ```
 
-The full discipline rule lives in root CLAUDE.md (step 4 wrote it, or step 6 brought it current). The file itself just needs to exist.
+That second paragraph is deliberate duplication. The full discipline lives in root CLAUDE.md (step 4 wrote it, or step 6 brought it current), but this is the file an agent opens to record a milestone and the file a human opens to find out how the changelog works, so the convention has to be legible from here without reading CLAUDE.md.
 
-If `docs/CHANGELOG.md` already exists, leave it alone.
+**Do not create `docs/changelog/`.** The first entry creates it. Git can't track an empty directory, and a `.gitkeep` in a folder that will be permanently populated is dead weight nobody ever deletes. (This is a *fresh scaffold* rule. The step-6 migration does create the folder — it has hundreds of backfilled entries to put in it.)
 
-**Do not create `docs/changelog.d/`**, even when the git mode uses fragments. It is meant to be empty on `main` — git can't track an empty directory, and a `.gitkeep` in there would be a permanent lie about the fold having run. The first branch that needs it creates it.
+**Don't seed the digest into a repo the audit just classified OK on the single-file scheme** (R3's migration rubric in `references/audit-checklist.md`). That would leave a digest sitting beside a `docs/CHANGELOG.md` whose `CLAUDE.md` never mentions it — a file with no reader and no writer. A repo keeps one convention or the other, never both.
+
+If `docs/CHANGELOG-DIGEST.md` already exists, leave it alone.
 
 ### 8. Offer git-describe app versioning (optional)
 
@@ -206,6 +212,7 @@ Print a short summary listing:
   - **Review happens once, at the commit — not after every edit.** Deliberately: a pass per prompt only ever sees its own turn's edits and costs more than it catches. When you ask the agent to commit and the working tree holds non-trivial changes, it asks first, with three options: **`/code-review high --fix`** (the deep pass — widest brief, broadest coverage, recommended for the accumulated diff this gate usually sees), **`/fix-code --fix`** (the tight pass — consequence-rated, only serious and unambiguous repairs), or **commit as-is**. The agent runs your choice itself. `/code-review` ships with the harness, so option 1 always works; when `fix-code` isn't installed, option 2 becomes the same review run inline (one careful read for a small diff; a subagent fan-out via the Agent tool, findings verified, for a big one), auto-fixing what it finds, reporting grouped by severity, and closing with whatever it couldn't fully verify. Nothing has to be installed for the gate to work, so it never goes dead.
   - **What the gate does *not* defer** — tests, build, and each subtree's own verification workflow still run per change. Only the review waits for the commit. The gate is skipped for trivial diffs and for a diff a full pass already covered, asked once per commit request, and checked before any delegated commit (`/git commit`) hands off.
   - The root CLAUDE.md also carries a **multi-agent workflow ("ultracode") cost-tiering** rule — tier subagent model + effort to the work, keeping review and hard-reasoning stages on the strong model (verifying concrete findings can drop to the mid model). Inert unless the agent runs the Workflow tool.
+  - **The changelog's session-start read is two `@`-references plus an action.** `docs/CHANGELOG-DIGEST.md` loads automatically; the recent window — `ls docs/changelog | tail -40`, then the newest 10 entry files — is something the session has to run, because no `@`-reference can express "the newest N files of a folder". The template numbers it and adds a self-check, but it can still be skipped, and it fails quietly when it is. If you want it deterministic, a session-start hook is the way (`update-config`); hooks are out of this skill's scope, so it's yours to add if you want it.
   - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
 
 Stop. Do not start building domain skills or expanding the docs — those are separate decisions for the user.
@@ -214,10 +221,11 @@ Stop. Do not start building domain skills or expanding the docs — those are se
 
 - Never overwrite an existing `CLAUDE.md` blind. An existing file goes through the audit pass (step 6): updates are surgical and additive, shown as a diff, and applied only to files the user picks. Custom sections the template never had are never deleted.
 - Never modify `CONCEPT.md` or `ARCHITECTURE.md`.
-- Never modify `CHANGELOG.md` if it already exists.
+- Never modify `docs/CHANGELOG.md` or `docs/CHANGELOG-archive.md` if they already exist — with exactly one exception, and it is the most consequential thing this skill can do: the changelog-layout migration (step 6, R3's migration rubric) **splits every entry into `docs/changelog/` and then removes both files from the working tree**. Only inside a migration the user explicitly picked; only after the verification gate passes (entry count in == file count out, every number accounted for in a marker); never on a mismatch; and in the same commit as the backfill, so it reverts as one diff. Entry content is copied verbatim and is never renumbered, reordered, or rewritten. Nothing is lost — git holds the originals — but this is a conversion, not an edit, so show the plan and the counts before doing it.
+- Never modify a landed file in `docs/changelog/`. Its path is its address; renaming or deleting one breaks every citation to it and produces no conflict to catch.
 
 ## Scope
 
-**In scope:** writing CLAUDE.md scaffolding, auditing and surgically updating existing CLAUDE.md files against the current recommendations (step 6, rubric in `references/audit-checklist.md`), seeding `docs/CHANGELOG.md`, optionally wiring git-describe app versioning (step 8, only if the user opts in — per-ecosystem recipes live in `references/app-versioning.md`), checking for the `fix-code` and `git` companion skills and offering to install the missing ones user-level (step 9, opt-in), and — for UI subtrees only — verifying Playwright MCP is installed and offering to install it headless if it isn't (`references/playwright-mcp.md`).
+**In scope:** writing CLAUDE.md scaffolding, auditing and surgically updating existing CLAUDE.md files against the current recommendations (step 6, rubric in `references/audit-checklist.md`), seeding `docs/CHANGELOG-DIGEST.md` (step 7), migrating a repo from the retired single-file changelog to the per-entry `docs/changelog/` folder when the audit finds evidence of pressure (step 6 — one all-or-nothing item that splits every existing entry into a dated file, verifies the split, removes the original changelog files from the working tree, and distils the digest from the same pass; delegated as a fan-out, and only if the user picks it), optionally wiring git-describe app versioning (step 8, only if the user opts in — per-ecosystem recipes live in `references/app-versioning.md`), checking for the `fix-code` and `git` companion skills and offering to install the missing ones user-level (step 9, opt-in), and — for UI subtrees only — verifying Playwright MCP is installed and offering to install it headless if it isn't (`references/playwright-mcp.md`).
 
 **Out of scope:** creating CONCEPT or ARCHITECTURE (the user does this), building domain skills (use `/skill-creator`), configuring hooks and general MCP-server or plugin management beyond the narrow Playwright-for-UI convenience above (use `update-config`), writing to user-side memory (per-user, not repo-side).
