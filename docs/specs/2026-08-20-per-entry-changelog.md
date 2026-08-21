@@ -9,6 +9,67 @@ fold at landing, the empty-on-`main` invariant, the janitor rule, the residual r
 deleted rather than adapted: the fragment file *is already the entry file*, and every piece of
 that machinery exists only to convert it into a line range in another file.
 
+## Amendment, 2026-08-21 — the digest is removed
+
+**Everything below about `docs/CHANGELOG-DIGEST.md` is superseded.** The digest is gone: there is
+no curated file, and required reading is now `@docs/CONCEPT.md` + `@docs/ARCHITECTURE.md` plus a
+three-step changelog read — the **full** `ls docs/changelog` index (not `| tail -40`), the newest
+10 entries in full, and a `grep -rli` over the folder before touching an area.
+
+*Why.* This spec accepted the digest as "the one shared append-target" on three grounds — a line is
+earned by only ~1 change in 10, the conflict is loud, and appends resolve by keeping both sides in
+either order (see *The digest is the one shared append-target…* below). Those grounds hold for the
+**append**. They were never argued for the other operation the same rule mandates: *"when the digest
+passes ~100 lines, tighten its older half."* That is a rewrite of shared lines, not an append — a
+real semantic conflict with no keep-both resolution — and it falls due precisely when the project is
+busy enough to have parallel work in flight. So the design's one hard-conflict operation was being
+paid to save ~1.5k tokens at 100 lines, against the 64k the old single-file scheme cost. The
+per-entry folder existed to remove exactly this failure class; leaving one file in it that every
+milestone appends to and every compaction rewrites was the last instance of the thing being removed.
+
+*Priced honestly, this is not a token saving.* Dropping ~100 curated lines while unbounding the
+index trades a fixed ~1.5k for roughly a dozen tokens per entry, growing for the life of the repo —
+at 537 entries the full index already costs more than the digest it replaced, and a long-lived repo
+pays a large multiple of it. What the change buys is **conflict-freedom and the end of a lossy
+compaction step**, not cheaper session starts. The template's ~1000-entry crossover — past which the
+full listing moves into the delegated subagent's brief and the inline read becomes a tail — is what
+keeps the cost from growing without limit.
+
+*What carries the reach instead.* The digest's job splits three ways, none of them a shared file:
+the **full index** names every entry ever (one cheap line each, and a derived listing, so zero
+contention); the **window** gives depth on recent work; the **grep** opens anything the index names.
+The load moves onto the slug — now required to name the thing rather than the activity, since it is
+the only part of an entry every future session sees — and onto the back-citation rule already in
+*Changelog discipline*, which becomes the sole mechanism carrying rationale forward.
+
+*The accepted cost.* Nothing is guaranteed to be *read* past the window any more, so a decision from
+six months ago is reachable only if a session thinks to grep for it. That is a real regression
+against the digest and it is taken knowingly: the mitigation is that the grep is mandated rather than
+suggested, and that the index makes the search terms visible instead of guessed.
+
+*Migration.* A repo already carrying a digest converts rather than freezes — each line folds into the
+`## Detail` of the entry it names (the one sanctioned edit to a landed entry, since it adds at the
+existing address), lines resolving to no entry are reported rather than dropped, and only then is the
+file deleted. This lives in `references/audit-checklist.md` as **R1's migration**.
+
+*What partly buys the reach back — an ephemeral digest.* Required reading gains an **optional**
+step between the window and the grep: delegate a digest of the entries behind the window to a cheap
+subagent (Haiku or equivalent), which returns ~20 lines of what must not be re-litigated, and
+**never persist it**. This is not the rejected generated index. That rejection — *"a generated index
+is a fold step by another name and goes stale silently"* — turns entirely on the artifact being
+**committed**; staleness requires persistence, so a summary rebuilt from the entries every session
+cannot drift from them, and nothing in git can contend for a file that is never written. Delegating
+to a cheap model is what makes a 50-entry read affordable at session start: the reading lands in the
+subagent's context and only the 20 lines reach the session's. The residual cost is nondeterminism —
+a human curated the committed digest, whereas a model re-decides each session and can omit what
+mattered — which is why the template fixes the *class* to surface rather than asking for a summary.
+It is optional because it buys nothing in a repo whose window already covers everything.
+
+*Also rejected here:* deriving a **committed** digest from per-entry markers, on this spec's own
+no-generated-index grounds (*Alternatives considered* → "A generated `RECENT.md`"); and a
+`docs/digest/` folder of milestone files, which trades the hot file for a second folder with
+overlapping semantics, a second path decision per milestone change, and nowhere for compaction to go.
+
 ## Key decisions
 
 - **Per-entry folder is the permanent home** (diverges). `docs/changelog/YYYY-MM-DD-<slug>.md`,
