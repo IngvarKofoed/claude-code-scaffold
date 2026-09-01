@@ -1,6 +1,6 @@
 # App versioning recipes (git-describe)
 
-Per-ecosystem recipes for the optional git-describe versioning step (SKILL.md step 7). Read only the section that matches the stack — per-subtree if a repo mixes stacks (e.g. a .NET backend and a Vite frontend each get their own treatment).
+Per-ecosystem recipes for the optional git-describe versioning step (SKILL.md step 8). Read only the section that matches the stack — per-subtree if a repo mixes stacks (e.g. a .NET backend and a Vite frontend each get their own treatment).
 
 **The contract every recipe implements.** The version is `git describe --tags --long --always --dirty` (e.g. `v0.1.0-32-g98af7ae`), resolved **once at build time, inside the checkout, and baked into the artifact** — exactly how MinVer, setuptools_scm, and Nerdbank.GitVersioning work. The running app **never shells out to git and never needs `.git`**; it only reads the value the build baked in — a stamped assembly/manifest, a generated version module, or an env var — falling back to `"unknown"` only when the bake step never ran. `git describe` runs in exactly one place: the build step (always inside the checkout, in CI and locally alike). Pick the *idiomatic* baking mechanism below; never make the running app resolve git itself.
 
