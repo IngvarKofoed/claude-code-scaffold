@@ -107,6 +107,12 @@ The note is there because every rule about this file lives here, in a `CLAUDE.md
 
 **If it only ever grows, the bar is too low.** A list that drains is working. Thirty items nobody has looked at is a list that gets skimmed and then ignored, at which point every line in it is a false claim that something is being tracked. When it stops draining, say so and name the lines you think nobody was ever going to do — the *drop* handle above is how they leave, so this is a prune to propose, not one to perform. Carrying them silently is the only wrong answer.
 
+## `TODO.md` is the user's
+
+`TODO.md` — at the repo root, or any file of that name elsewhere in the repo — is the user's own list, and **you never write to it**. Don't add, tick off, strike through, reword, reorder or delete items; don't create the file when it's absent, and don't move or delete it. That holds when your change finishes something it lists: say so in the turn — *"this completes 'X' in `TODO.md`"* — and leave the ticking to the user. Reading it is fine.
+
+It is not `docs/CLAUDE_TODO.md`. That one is yours, under *Owed follow-ups* above, and it's where a follow-up you find goes — never into `TODO.md`. So "add X to the TODO" means `docs/CLAUDE_TODO.md`. If the user asks for a change to `TODO.md` itself, give them the exact lines to paste instead of making the edit: the file stays theirs because they are the only one who ever writes to it.
+
 ## Nested guidance
 
 Each `src/` subtree (or service / package / area) has its own `CLAUDE.md` with scoped tool/skill rules:
