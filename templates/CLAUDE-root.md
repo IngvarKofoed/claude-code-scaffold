@@ -1,188 +1,48 @@
 # <Project name>
 
-<One-sentence description of what the project does.>
+## Source of truth
 
-## Always read first
+These two docs are the source of truth for what we're building and how it's built. They run ahead of the code: much of what they describe isn't built yet, and building it is the work. Where existing code does something differently from the docs, don't change either one to match the other: point out the mismatch and ask which is right.
 
-Before doing any work in this repo, **always read all** of these:
+- @docs/CONCEPT.md — <a few words: what the project does>.
+- @docs/ARCHITECTURE.md — <a few words: how it's built>.
 
-- @docs/CONCEPT.md — <one line specific to this project: what the system does, primary domain entities, key lifecycles, UI/UX scope>
-- @docs/ARCHITECTURE.md — <one line specific to this project: stack choices, topology, state model, project layout>
+## Changelog
 
-Then the changelog, as **actions** rather than loads — no `@`-reference can express "the files of a folder", so this part is yours to fetch. `docs/changelog/` is the entire record, and these steps are the only way into it.
+Every change gets its own file in `docs/changelog/`, named `YYYY-MM-DD-<slug>.md` and written as part of the same change. There is no `CHANGELOG.md`, no entry numbers and no digest file.
 
-1. `ls docs/changelog` — the index, **in full, not a tail**, so that every entry the project has ever written is named once: recent work at the bottom, everything older above it. Each entry is its own file, `YYYY-MM-DD-<slug>.md`. This is not free — it costs roughly a dozen tokens per entry and grows for the life of the repo — but a name is the cheapest possible handle on an entry, and being able to see that something exists is what makes step 4 findable rather than guesswork. Past **~1000 entries** the balance tips: hand the full listing to step 3's subagent instead and read a generous tail here. An absent folder just means no entries yet.
-2. Read the **newest 10** in full, or **everything from the last seven days**, whichever is more. Ten is a **floor, not a measure**: at four changes a day it is two days of memory, and in a heavy week barely one. Step 1 already gave you the dates, so you can see which of those two the floor lands on before you start — and if the work you are about to do reaches back further than either, keep reading back until it doesn't.
-3. **Delegate a digest of everything behind the window** to a cheap, fast subagent (Haiku or equivalent) — never the main session, since the whole point is that the reading cost lands somewhere other than this context. **Skip this step** when delegating to a subagent isn't available here, or when step 1 showed little behind the window — with thirty entries the window already covers the repo and there is nothing to summarize. Give the subagent `ls -r docs/changelog | tail -n +11` (every entry older than the ten you just read, newest first; written this way because a negative `head -n` count is GNU-only and errors out on macOS) and this brief: read each **lead**, open a `## Detail` only when the lead signals a decision, and return **at most 20 lines** of what a session must not re-litigate — a decision with a rejected alternative, something tried and removed, a constraint that still binds, an entry that reversed an earlier one. Not a recap of what changed; the entries are already that. Leads are 1–5 lines by rule, so this stays affordable across the whole history rather than a recent band. **Never write its output to a file.** Regenerating it per session is what makes it unable to rot, and what keeps anything in git from contending for it.
-4. **Before you touch an area, grep the folder for it** — `grep -rli <term> docs/changelog/`, using the words you would pick to describe what you are about to change. This is the only path to a decision made months ago, and the index in step 1 is what tells you which terms are worth trying.
+- **Before you touch an area,** run `ls docs/changelog` and `grep -rli <term> docs/changelog/` with the words you'd use for it. That's how earlier decisions are found.
+- **The slug names the thing, not the activity:** `expired-refresh-tokens`, not `auth-fixes`.
+- **The lead**, 1–5 short lines under the `#` heading, says what is now true that wasn't before, and why when that isn't obvious. It doesn't recap the diff.
+- **`## Detail`** holds what would be lost when the session ends: rejected alternatives, constraints that still bind, known gaps, what verification didn't cover. Name them in words someone would grep for, and don't restate the lead. Leave it out when there's nothing.
+- **Never rename, move or delete an entry:** other docs cite it by slug. When a change revisits an earlier decision, cite that entry's slug.
 
-**The grep is not optional and it is not a fallback**, with or without the delegated digest. Nothing here will *show* you a decision from six months back on its own — the index names it, the grep opens it, and skipping both means re-litigating it with nothing signalling that anything is missing. The digest helps but does not replace it: 20 lines distilled from hundreds of leads is necessarily lossy, and it reads leads rather than detail, so the thing you need may be in a `## Detail` it never opened. So before you write a changelog entry, confirm you did both: *did I list `docs/changelog/` this session, and grep it for what I touched?*
+Bad, a recap of the diff:
 
-Then read `docs/CLAUDE_TODO.md` — the list of work this project owes and hasn't done. Also an action rather than a load: the file doesn't exist until a session writes the first item, so an `@`-reference would dangle in every repo that owes nothing. Absent means nothing is outstanding. It is short by design, so read all of it — and read *Owed follow-ups* below before you act on any of it, because the one thing that section insists on is that finding an item there is never a reason to start on it.
+```
+# Auth changes
 
-`CONCEPT.md` and `ARCHITECTURE.md` are the source of truth for *what* we're building, what we've built, and *how* it's structured. If something in the code contradicts them, either the code or the doc is wrong — flag it rather than guessing.
-
-## Changelog discipline
-
-Every change you make to this repository must be recorded in `docs/changelog/` as **its own file**, named `YYYY-MM-DD-<slug>.md` — the date you write it, then a 2–4 word kebab-case slug. Same shape as `docs/specs/`. There is no single changelog file and there are no entry numbers: one file per change is what makes two parallel changes unable to collide, because no two can reach for the same path.
-
-- **The file has two tiers, bounded differently.** A `#` heading, then a **lead** of **1–5 lines, ~20 words per line at most** — never one packed run-on line, since a 40-word run-on isn't a short entry, it just hides the bulk on a single line. Below it, a **`## Detail`** section — **owed whenever one of these exists, omitted only when none does**: an alternative you rejected (so nobody re-introduces it), a constraint that still binds, a known limit or deferred follow-up, a gap a future session would otherwise assume your verification covered. Write it now or not at all: these live in the context of the session that made the change and are gone when it ends, which is why the section is owed here rather than merely allowed. **It never restates the lead** — padding, not omission, is what goes wrong with a section nothing bounds by length. The lead is bounded because it is what a session reads to orient; the detail is bounded by *purpose*, because nothing else bounds it: each entry has a file to itself. Past ~40 lines of detail the change wanted a spec — write one and link it.
-- **Write the lead as durable project memory, not a recap of the diff**: what is now *true that wasn't before* — new behavior, state, or rule — plus, in a clause and only when it isn't obvious, the *why*. Skip filenames, mechanical edits, and refactors with no behavior change; the diff and commit already hold those. Self-check: *if a future agent reads this before the code, does it learn what changed, why it matters, or what's now safe to assume?* If not, it's noise.
-- **A landed entry file is never renamed, moved, or deleted.** Its path is its address — other docs, specs and code comments cite it by slug — and this is the one thing here that can break silently. Two changes claiming the same path is a merge conflict, which git blocks; a rename produces no conflict and breaks every citation to that entry with nothing noticing. **Cite in the other direction too:** when your change revisits, narrows or reverses a decision an earlier entry recorded, name that entry's slug in yours. That makes the chain greppable instead of something a future session has to reconstruct — and with no digest carrying it, this is *the* mechanism by which rationale reaches back past the recent window, without any entry growing.
-- Write the entry as part of the same change. One file per change: don't batch several changes into one file, and don't skip entries. If a change is genuinely several, give each its own file.
-- **Where `HEAD` is doesn't matter.** On `main`, on a PR branch, in a worktree — the entry file is written the same way in all of them, with nothing staged or moved at any point, because the file you write is the file that lands.
-- **In a worktree, what you read is a base copy.** `docs/changelog/` there is the folder as it stood when the worktree was created, missing anything landed since. That makes the index a base index too, so a grep that finds nothing is not proof that nothing exists. Orient from it, but don't conclude from it that something hasn't been done.
-- **A deferred follow-up gets written twice, deliberately.** Once in this entry's `## Detail`, where it is a permanent statement about what this change left undone, and once as a line in `docs/CLAUDE_TODO.md`, where it is a claim about what the project owes *right now* — see *Owed follow-ups* below for why neither can do the other's job.
-- **Write so the index and a grep can find it, because nothing else will.** There is no digest and no curated decision list — deliberately, since any such file is one every change appends to and every compaction rewrites, which is the collision the folder exists to remove. Your entry file is the only copy, reachable exactly two ways: by its slug in `ls docs/changelog`, and by grep over the folder. So the **slug names the thing, not the activity** — `expired-refresh-tokens`, not `auth-fixes` — because the slug is the only part of your entry every future session sees. And when the change carries a decision that must not be re-litigated, say it in the words someone would search for: name the alternative you rejected, the constraint that still binds, the thing you tried and removed. Don't allude to it. An entry nobody can find is an entry nobody wrote.
-
-Same change, bad vs. good entry — `docs/changelog/2026-03-14-expired-refresh-tokens.md`:
-
-- **Bad** (short, but just recaps the diff — zero orientation value):
-  ```
-  # Auth changes
-
-  Updated auth files, reworked middleware, added tests, renamed AuthHelper.
-  ```
-- **Good** (states what's now true, with the why in a clause, and puts the rejected alternative where it can't rot):
-  ```
-  # Expired refresh tokens rejected before session lookup
-
-  Auth now rejects expired refresh tokens before session lookup; stale sessions can
-  no longer silently renew. Validated at the middleware boundary, so handlers can
-  assume every request they see is current.
-
-  ## Detail
-  - Rejected checking this in the session store: the store can't tell "expired" from
-    "never existed", so the error the client got would have been wrong.
-  ```
-
-## Owed follow-ups
-
-`docs/CLAUDE_TODO.md` is one list of work this project **owes and has not done** — things a session found while doing something else and deliberately left alone. You write it and you drain it — the shape of the whole file is below. It doesn't exist until the first item needs writing, and it goes back to not existing when the last one is done.
-
-**It is not a work queue. Never begin an item because it is in the file.** The user asking is the only thing that starts work, here as everywhere. What the list is for is the moment *before* you start: you've been asked to change an area, and the list tells you what an earlier session already knew was wrong with it. Surface the relevant item then — one line, as context for the change you were actually asked to make — and let the user decide whether it comes into scope. An item stays on the list however long it sits there; age is not a mandate.
-
-**If you find an item you didn't write, treat it as a request, not a to-do.** The file is yours by convention, not by permission — nothing stops the user typing into it. Don't leave such a line sitting silently: say it's there and ask whether they want it done now.
-
-**How the user drives it.** Writing the list is yours; *acting* on it is always theirs. Four things they'll say, to honor plainly whenever they come up:
-
-- **"What's outstanding?"** / "anything owed in here?" — read the list back, narrowed to the area if they named one. If the file doesn't exist, say nothing is outstanding rather than that a file is missing.
-- **"Do that one."** — an ordinary request that happens to have a handle. Do the work, write the changelog entry, delete the line: one change.
-- **"Drop it."** / "we're not doing that" — delete the line *without* doing the work. This is the one deletion that isn't a completion, and it earns no changelog entry, because nothing changed. Don't argue for keeping it; a list whose items have to be defended out of it stops being a list anyone reads.
-- **"Add X to the TODO."** — write it in the item shape below, from what they said. This is them asking you to record something, which is not the same as them typing a line in themselves.
-
-**Say it in the turn when you add an item** — one line, *"noted a follow-up about X"*. Don't ask permission; deferring the work was already the decision, and the entry in the file is a consequence of it. But a file the user isn't watching that grows silently is a file they stop trusting.
-
-**What earns a line.** Something genuinely owed, that you found, that was out of scope for the change you were making — a limitation you hit, a gap in coverage you noticed, work the change you just landed implies but doesn't contain. The bar is *would a future session want to know this is still outstanding*, not *could this be better*. Three things that don't belong: work the user just asked for and you're about to do anyway; refactors and ideas with nothing behind them, which is how a list becomes something nobody reads; and anything small enough that writing it down costs more than doing it — if it's in scope and cheaper to fix than to record, fix it.
-
-**The whole file, and the shape of an item.** A heading, a short note for whoever opens the file without having read this section, then bullets — each one bullet, no nesting: what is owed in a bold clause phrased as the thing rather than the activity, a sentence of why it matters, then where it came from — the slug of the changelog entry that surfaced it, whenever there was one.
-
-```markdown
-# Owed follow-ups
-
-Work this project owes and hasn't done, written and drained by Claude — the rules are
-under *Owed follow-ups* in `CLAUDE.md`. Items are deleted when the work lands, so this
-is not a record of anything; `docs/changelog/` is. A line you add here is read as a request.
-
-- **`SessionStore.purge` drops sessions it can't decode** — a decode failure is read as
-  expiry, so a schema change would silently purge live sessions. Surfaced by
-  `2026-03-14-expired-refresh-tokens`.
+Updated auth files, reworked middleware, added tests, renamed AuthHelper.
 ```
 
-The note is there because every rule about this file lives here, in a `CLAUDE.md` that someone browsing the repo isn't reading — without it they find a bare list with no sign of who wrote it or that lines get deleted. It's fixed text: it doesn't grow, and it can't go stale.
+Good, `docs/changelog/2026-03-14-expired-refresh-tokens.md`:
 
-**Structure stops there.** No grouping by area, no priorities, no owners, no dates, no status column, no done section, no item numbers. Each of those will look like an obvious improvement at some point, so:
+```
+# Expired refresh tokens rejected before session lookup
 
-- **Grouping by area** — a list short enough to read whole doesn't need an index into itself. And when it does get long enough for headings to help, *the length is the finding*: the bar for a line has slipped. Reach for the drain, not the heading.
-- **Dates** — the origin slug already carries one (`2026-03-14-expired-refresh-tokens` says when this surfaced). A second date field adds nothing and invites deciding by age, which *not a work queue* above already rules out.
-- **Priorities and owners** — everything here is owed and nothing here is scheduled. A priority column is a claim about sequencing that only the next request can actually make.
-- **A done section or item numbers** — these are the two ways the file starts behaving like a record, and it isn't one. Numbers are the worse of the two: *Never cite it* below works only because there is no stable anchor here to cite.
+Auth now rejects expired refresh tokens before session lookup; stale sessions can
+no longer silently renew. Validated at the middleware boundary, so handlers can
+assume every request they see is current.
 
-**Delete the item when the work lands** — in the same change that does the work. Not struck through, not moved to a done section, not kept with a note. The changelog entry is the permanent record and the item was never a record of anything; keeping both means the list stops draining and starts having to be read *past*. Deleting is what makes the file worth reading at session start: everything still in it is outstanding **now**, by construction.
+## Detail
+- Rejected checking this in the session store: the store can't tell "expired" from
+  "never existed", so the error the client got would have been wrong.
+```
 
-**Why this exists when a changelog entry's `## Detail` already records deferred follow-ups.** They are the same discovery in two different tenses, and neither does the other's job. The entry says *we deferred this* — permanently, at the address of the change that deferred it — and because a landed entry is never edited, it goes on saying so long after the work is done. Nothing in an append-only record can tell you what is *still* owed. This file can, because it is mutable and because deleting is half the convention. So write both: the entry, because that's where the reasoning survives being deleted from here, and the line, because that's the only place the present tense lives. An item with no entry behind it loses its reasoning the moment the session ends.
+## Commits
 
-**Never cite it.** No spec, doc, changelog entry or code comment points at this file or at a line in it. Every line is temporary by design, so citations to it break silently as it drains — the exact inverse of a changelog entry, whose path is a permanent address. Cite the entry instead.
+<Of the first two bullets, keep the one for the mode the user picked and delete the other, then delete this note.>
 
-**One file is deliberate.** A list you can't see at once isn't a list, so this doesn't get the per-entry folder treatment `docs/changelog/` gets — and doesn't need it. What makes a shared file collide is the periodic rewrite, and nothing rewrites this one: two changes appending both touch the last lines, git reports it, and the resolution is always *keep both*. In a worktree it's a base copy like `docs/changelog/`, so an item added on `main` since won't be in it.
-
-**If it only ever grows, the bar is too low.** A list that drains is working. Thirty items nobody has looked at is a list that gets skimmed and then ignored, at which point every line in it is a false claim that something is being tracked. When it stops draining, say so and name the lines you think nobody was ever going to do — the *drop* handle above is how they leave, so this is a prune to propose, not one to perform. Carrying them silently is the only wrong answer.
-
-## `TODO.md` is the user's
-
-`TODO.md` — at the repo root, or any file of that name elsewhere in the repo — is the user's own list, and **you never write to it**. Don't add, tick off, strike through, reword, reorder or delete items; don't create the file when it's absent, and don't move or delete it. That holds when your change finishes something it lists: say so in the turn — *"this completes 'X' in `TODO.md`"* — and leave the ticking to the user. Reading it is fine.
-
-It is not `docs/CLAUDE_TODO.md`. That one is yours, under *Owed follow-ups* above, and it's where a follow-up you find goes — never into `TODO.md`. So "add X to the TODO" means `docs/CLAUDE_TODO.md`. If the user asks for a change to `TODO.md` itself, give them the exact lines to paste instead of making the edit: the file stays theirs because they are the only one who ever writes to it.
-
-## Nested guidance
-
-Each `src/` subtree (or service / package / area) has its own `CLAUDE.md` with scoped tool/skill rules:
-
-- `src/<subtree-a>/CLAUDE.md` — <one-line scope>
-- `src/<subtree-b>/CLAUDE.md` — <one-line scope>
-
-## Reviewing changes
-
-**This repo has exactly one review point: the commit.** Do not review after every edit, and do not run an unrequested review pass mid-session. A pass per prompt costs more than it catches — it only ever sees its own turn's edits, and the next follow-up re-opens what it just looked at.
-
-What does *not* wait for the commit is verifying your own work: run the tests, the build, and whatever the subtree's `CLAUDE.md` mandates, per change, as always. Deferred here is the *review*, not the checking. Never report a change complete on the grounds that its review comes later.
-
-The commit is the right moment because it's when the diff is sealed into history, and because it's the first point where the accumulated diff can be read as **one change** — which is what a review needs. Reviewed edit-by-edit, from inside the context that just wrote each one, a review sees the least and repeats its own blind spots.
-
-**So when the user asks you to commit (or commit and push) and the working tree holds non-trivial changes, ask before committing** — `AskUserQuestion`, two options in this order:
-
-1. **`/code-review high --fix`** — review the accumulated diff: broad coverage, correctness plus reuse / simplification / efficiency, repairs applied to the working tree.
-2. **Commit now** — skip the review and go straight to the commit.
-
-Recommend option 1 for the diff this gate usually sees — accumulated over several rounds, or landed by a fan-out. `/code-review` ships with the harness, so it is always available exactly as written — keep the explicit `high`, because without a level the command silently reuses whatever level was typed last.
-
-**You** run the pass; the user is only choosing whether it happens. This is the one place the review flow stops to ask.
-
-- Ask **once per commit request**, not per round or per file. If the user picks a review, run it, report, then continue to the commit without asking again.
-- **Skip the question** when the diff is trivial — a typo, a version bump, a changelog line — or when a full review pass has already covered this working diff since the last edit. Asking there is noise.
-- **Any** commit request goes through the gate, including a delegated one (`/git commit`, `/git commitandpush`) — check it before handing off, not after. A skill or subagent that does the committing never sees this rule.
-- If the user picks *Commit now*, that's the answer — commit as asked, and don't re-offer or hedge about it afterwards.
-
-### Running the review pass
-
-`/code-review high --fix` reviews the current diff at high effort: broader coverage than the lower levels, including findings it isn't fully certain of, which is what you want at a gate that fires once per commit. Its brief covers correctness bugs *and* reuse / simplification / efficiency cleanups in the same pass, and `--fix` applies what it finds to the working tree after the review. Its own report stands; don't restate it. Being a broad pass, it will also repair things that aren't blockers, so read the resulting diff before committing rather than assuming every edit was one.
-
-Close by saying plainly what the review couldn't settle — you guessed at intent, left a known gap, or nothing covers it — so the user knows where their own judgement is still needed. State it as a fact about the change, not as a recommendation to run anything.
-
-## Multi-agent workflows
-
-When you fan a task out across subagents — the Workflow tool ("ultracode") — tier each agent's model and reasoning effort to the work, so cost tracks value instead of every agent defaulting to the strongest (most expensive) model:
-
-- **Strongest model** (the session model) — contracts, correctness-critical implementation, adversarial review (finding unknown problems), and any verification or synthesis that needs design judgment or where a wrong call silently drops a real defect (security, data-integrity, correctness blockers). Never downgrade these; they are where quality is won or lost.
-- **Mid model** — build/test runners, straightforward mechanical implementation, verifying concrete already-stated findings (the review did the catching), and applying already-decided fixes.
-- **Cheapest model + low effort** — i18n, styling, and other boilerplate.
-
-The guardrail: the stage that *catches* an unknown problem (review) stays strong; a stage that only *checks* or *applies* an already-identified one drops a tier by default — escalate a verifier back to the strong model only for subtle or security-/data-integrity-critical findings. For a small finding set, fold verification into the fix-apply agent (verify-and-fix in one pass) rather than one strong agent per finding. Set this per `agent()` call (`model` / `effort`); an agent that omits `model` inherits the session model, which is why an untiered fan-out silently runs everything on the most expensive tier.
-
-**Invoking a named workflow is not authoring one.** The tiers above are yours to set only when *you* write the `agent()` calls. A built-in or named workflow carries no model overrides of its own, so every stage inherits the session model and a wide fan-out bills every agent at the top tier. Size the run before launching it — how many agents the fan-out implies, given the work it's spread over — rather than planning to retier afterwards; editing the `scriptPath` a run reports is a per-run patch, and resuming re-runs every stage from the edited `agent()` call onward, so the untiered agents get billed twice.
-
-**A workflow's aggregate diff is what the review gate is for.** A fan-out edits files across several subagents — often in separate worktrees — so no single agent ever saw the whole combined change, and any review stage *inside* the workflow checked its own findings, not the landed diff. This doesn't earn an extra pass on return; the commit is still the review point. But when the gate asks, say the diff came out of a fan-out — it's where the review earns its cost most clearly, so recommend it there even when every agent's own slice looked small.
-
-This section is inert unless you actually run a multi-agent workflow.
-
-## Git workflow
-
-<Keep one of the two modes under *Where commits land*. A mode is its **bolded line plus every unbolded paragraph up to the next bolded line** — Branch + PR is two paragraphs, not one — except the final two paragraphs of that subsection (*where, not when* and the review-gate pointer), which are mode-independent and always stay. Delete this note.>
-
-### Where commits land
-
-**Direct to `main`** — when you commit, commit straight to `main`; don't open branches or PRs unless asked. <Push policy, e.g. push after each commit, or leave pushing to the user.>
-
-**Branch + PR** — never commit directly to `main`. For each change: branch from `main` (`<naming, e.g. feat/<slug>>`), commit, push, then open a PR. <Who/what merges; note here if `main` is protected.>
-
-Nothing about the changelog is special at landing here: the entry file is written on the branch with its change, per *Changelog discipline* above, and it rides the PR and merges with it. No other PR can touch that path, so nothing about the entry goes stale however long the PR sits open — which is why there is nothing to stage and nothing to remember at hand-off.
-
-**This setting only chooses *where* commits go — not *when* to make them.** Commit only when the user asks; finishing a change is not a cue to commit it. When you do commit, each commit is one complete change including its changelog entry file — never leave the tree half-committed.
-
-A commit request first passes through the review gate in *Reviewing changes* above — check it before staging anything, wherever the commit is being made: a commit inside a worktree is still a commit.
-
-<!-- Add additional sections below as the project develops:
-  - Project-specific forcing rules (e.g., "Check in with the user before making CSS / layout / UX changes")
-  - Destructive-operation guidance if the agent's defaults aren't enough
-  - Naming conventions, code-organization rules
--->
+- Commit straight to `main`, without a branch. <Add "Push after each commit." only if the user wants that; otherwise leave pushing out.>
+- For each change, branch from `main` as `<naming, e.g. feat/<slug>>` and open a PR. <Who merges; whether `main` is protected.>
+- When the user asks to commit a non-trivial diff, first ask with `AskUserQuestion`: run `/code-review high --fix` (recommended), or commit now. Skip the question for a trivial diff.

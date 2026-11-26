@@ -25,4 +25,4 @@ Common ones (add only those that apply):
 - **Required skills** — chain to project-specific skills (`foss-design-system`, security review, etc.) the agent must invoke for certain work.
 - **Deployment / infra specifics** — pinned versions, env vars, runbook pointers.
 
-Keep imperative ("you must…", "always…") with a concrete forcing action.
+State each rule plainly, with the concrete action it requires — e.g. **"A type change lands in all three packages at once."** — rather than "you must…" or "always…".
