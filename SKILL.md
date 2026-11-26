@@ -13,6 +13,12 @@ Works in two modes per target file, decided automatically:
 
 A single run can do both: e.g. audit an existing root `CLAUDE.md` while scaffolding the subtree files that don't exist yet.
 
+## Writing CLAUDE.md text
+
+Everything this skill writes into a `CLAUDE.md` — a fresh scaffold (steps 4–5) or an audit update (step 6d) — states the current rules as if they were the only rules there have ever been. The session that reads the file has never seen an earlier version of the template or of the file, and current models take a `CLAUDE.md` literally: "there is no summary file to load in its place" or "now that entries no longer share a file" sends it looking for an alternative that doesn't exist in that repo.
+
+Test each sentence, and watch especially for "no longer", "now that", "anymore", "used to", "retired", and "there is no …" naming a mechanism this skill dropped. If the sentence guards against something a fresh session would do on its own — create a `CHANGELOG.md`, start a digest file, review after every edit — keep it, with its reason. If it only records what an earlier version did, rewrite it as the current rule. `references/audit-checklist.md` names retired schemes because detecting them is its job; that history goes in the finding shown to the user, never in the text written to the file.
+
 ## Workflow
 
 Each step is a hard gate. If a step's check fails, stop and tell the user — do not silently skip.
@@ -75,7 +81,7 @@ For each subtree path from step 3 **whose `CLAUDE.md` doesn't exist yet** (exist
 2. **Read `templates/CLAUDE-subtree.md`** in this skill's folder.
 
 3. **Fill the easy slots directly from the project:**
-   - **Required tools** — at minimum, `LSP` for the subtree's primary language. For UI subtrees, mandate browser tools (Playwright MCP) — but first confirm Playwright MCP is actually installed and connecting; if it's missing, or only available headed (e.g. bundled by a plugin), offer to install it headless per `references/playwright-mcp.md`. Run that availability check once per run, not per subtree. Quote the load instructions if the tool is deferred.
+   - **Required tools** — at minimum, `LSP` for the subtree's primary language. For UI subtrees, mandate browser tools (Playwright MCP) — but first confirm Playwright MCP is actually installed and connecting; if it's missing, or only available headed (e.g. bundled by a plugin), offer to install it headless per `references/playwright-mcp.md`. Run that availability check once per run, not per subtree. Name each tool and why work in this subtree needs it, and leave out how to load it: the harness tells every session how to load a deferred tool, and which tools are deferred changes between Claude Code versions, so a written recipe misleads on any version where it doesn't hold.
    - **Testing** — read the actual test framework from the package manifest (Vitest / Jest / xUnit / pytest / etc.) and pin it. Keep the "do not introduce a different test framework without updating the architecture doc" closing line — it's a forcing rule, not boilerplate.
    - **Verification workflow** — include the 4-step Playwright MCP pattern (already in the template's catch-all section) for UI subtrees; skip it for backend/library subtrees where the test suite is the verification.
 
@@ -129,7 +135,7 @@ One exception to narrowing: the **changelog-layout migration** spans R1, R3, R6 
 
 **It is internally all-or-nothing, like the layout migration.** Separable from everything else on offer, not separable from itself: taking the fold without the delete leaves a file that is now duplicated into the entries and still appended to, and — **when the file exists**, which is the combination this applies to; the checklist's four combinations govern the rest — taking the re-point or the R3 strip without the fold orphans the digest — a file every milestone still reaches for and no session ever loads, which is the worst of the four states. If the user wants to split it, say that and take all or none.
 
-**d. Apply surgically to the chosen files.** Follow the "Applying updates" rules in `references/audit-checklist.md`: add Missing sections (filled from the project, not raw placeholders), rewrite Outdated sections to the current intent while keeping surrounding project-specific wording, fix Stale items, and **never delete custom sections the template never had**. Show the diff and confirm before writing each file. Files the user didn't pick are left exactly as-is.
+**d. Apply surgically to the chosen files.** Follow the "Applying updates" rules in `references/audit-checklist.md`: add Missing sections (filled from the project, not raw placeholders), rewrite Outdated sections to the current intent while keeping surrounding project-specific wording — stating the current rule only, per *Writing CLAUDE.md text* above — fix Stale items, and **never delete custom sections the template never had**. Show the diff and confirm before writing each file. Files the user didn't pick are left exactly as-is.
 
 ### 7. Create nothing for the changelog or the follow-up list
 

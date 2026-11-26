@@ -6,7 +6,7 @@ Contents: <list of projects / folders / packages here>.
 
 ## Required tools
 
-- **`<Tool name>`** — <why it's required for work in this subtree>. <Load instructions if deferred, e.g. via `ToolSearch select:<name>`.>
+- **`<Tool name>`** — <why it's required for work in this subtree>.
 - **`<Skill name>`** — <when to invoke it during work here>. <If the skill is project-specific, mention where it lives.>
 
 ## Testing

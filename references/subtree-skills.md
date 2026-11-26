@@ -36,8 +36,12 @@ Two things explicitly *not* covered here, because the scaffold skill picks them 
 - **When to mandate:** subtrees touching auth, crypto, payments, secrets, sensitive-data handling.
 
 ### `claude-api`
-- **What:** Anthropic-bundled skill. Guidance for projects building with the Anthropic SDK; includes prompt caching patterns.
-- **When to mandate:** subtrees that import `anthropic` / `@anthropic-ai/sdk`.
+- **What:** Anthropic-bundled skill. Reference for the Claude API through the Anthropic SDK (`anthropic` / `@anthropic-ai/sdk`) and for Managed Agents: model ids, request parameters, tool use, prompt caching. It does **not** cover the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk` / `claude-agent-sdk`). The skill's own text says it does not generate Agent SDK code.
+- **When to mandate:** subtrees that import `anthropic` / `@anthropic-ai/sdk`, or call Managed Agents. Never for Agent SDK code — see the next entry. A subtree that uses both mandates `claude-api` for its API code only.
+
+### Claude Agent SDK subtrees (no skill)
+- **What:** no installed skill covers the Claude Agent SDK. The subtree still needs a rule, because the SDK's options change between releases and a session will otherwise write them from memory.
+- **When to mandate:** subtrees that import `@anthropic-ai/claude-agent-sdk` / `claude-agent-sdk`, or that `docs/ARCHITECTURE.md` says are built on it. Write it into *Required tools* as: before writing or changing code that calls the SDK, check the option or callback in the SDK's own type definitions in the installed package, or ask the built-in `claude-code-guide` agent, which covers the Agent SDK. Offer it in the per-subtree question with the other candidates, marked as a rule with nothing to install.
 
 ### `csharp-lsp` (plugin)
 - **What:** Plugin providing the C# language server (`csharp-ls`). The `LSP` tool uses it for C# symbol navigation, references, hover.
