@@ -28,7 +28,7 @@ A leftover unfilled placeholder (`<like this>`) anywhere in an existing file is 
 Source of truth: `templates/CLAUDE-root.md`.
 
 ### R1 — The docs, loaded with `@`
-`@docs/CONCEPT.md` and `@docs/ARCHITECTURE.md`, each with a few words on what it covers, under a *Source of truth* heading.
+`@docs/CONCEPT.md` and `@docs/ARCHITECTURE.md`, each with a short label — what the project does, how it's built — under a *Source of truth* heading. The label names the doc's role; it doesn't summarize the doc, which loads right below it.
 - *Why:* anchors every session in the contract docs. The `@` loads them at session start, so no separate instruction to read them is needed.
 - *Outdated looks like:*
   - **an "Always read first" block carrying the old changelog reading ritual** — read the newest 10 entries or the last seven days, delegate a digest of the rest to a subagent, read `docs/CLAUDE_TODO.md`. Cut it to the two `@` lines; the changelog's read is R3's `ls` plus grep.

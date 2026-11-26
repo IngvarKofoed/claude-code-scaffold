@@ -4,8 +4,8 @@
 
 These two docs are the source of truth for what we're building and how it's built. They run ahead of the code: much of what they describe isn't built yet, and building it is the work. Where existing code does something differently from the docs, don't change either one to match the other: point out the mismatch and ask which is right.
 
-- @docs/CONCEPT.md — <a few words: what the project does>.
-- @docs/ARCHITECTURE.md — <a few words: how it's built>.
+- @docs/CONCEPT.md — what the project does.
+- @docs/ARCHITECTURE.md — how it's built.
 
 ## Changelog
 

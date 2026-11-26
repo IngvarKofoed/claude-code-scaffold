@@ -61,7 +61,6 @@ Read the template at `templates/CLAUDE-root.md` in this skill's folder.
 
 Fill placeholders:
 - **Project name** — read it from `package.json`, `pyproject.toml`, `*.csproj`, `Cargo.toml`, or ask the user.
-- **Doc lines** — a few words each on what `CONCEPT.md` and `ARCHITECTURE.md` cover, taken from the docs' own openings.
 - **Git workflow** — ask one question. It can't be inferred, so always ask it.
 
   **Where do commits land?** Two options: directly to `main`, or branch and open a PR per change. Keep the matching bullet under *Commits* and delete the other. Direct-to-`main` asks whether to push after each commit (leave the push line out unless the user wants it); Branch+PR needs the branch-naming convention and whether `main` is protected.
