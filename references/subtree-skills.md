@@ -29,7 +29,7 @@ Two things explicitly *not* covered here, because the scaffold skill picks them 
 
 ### `frontend-design`
 - **What:** Anthropic-bundled skill. Produces distinctive, non-generic UI; avoids AI-template aesthetics.
-- **When to mandate:** frontend / UI subtrees where craft and polish matter.
+- **When to mandate:** frontend / UI subtrees whose visual direction is still open. Not where mockups or a design system already fix the look: the skill pushes toward a direction of its own.
 
 ### `security-review`
 - **What:** Anthropic-bundled skill. Reviews changes for security issues.
