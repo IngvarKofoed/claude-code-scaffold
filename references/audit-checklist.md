@@ -120,32 +120,29 @@ A one-line description of what lives in the subtree, naming an entry point only 
 - *Why:* orients the agent before it touches the subtree.
 - *Stale looks like:* unfilled `<placeholder>` text; **a contents list that doesn't match the folder** — it names folders that don't exist (often ones `ARCHITECTURE.md` plans but nobody has built) or misses ones that do. Drop the list: the folder shows what's there. An accurate list isn't a finding.
 
-### S2 — Required tools
-At minimum the `LSP` for the subtree's primary language; browser tools (Playwright MCP) for UI subtrees; each named with why work in this subtree needs it.
-- *Why:* the agent needs the right tools loaded to work effectively here.
-- *Outdated looks like:* no LSP entry; a UI subtree with no browser-automation tool; **a load recipe for a deferred tool** ("it is a deferred tool: load it with `ToolSearch` `select:LSP`", "load the ones you need with `ToolSearch`") — minor. The harness already tells every session how to load deferred tools, and whether a given tool is deferred changes between Claude Code versions, so a literal reader follows a recipe that may not hold. Drop the recipe and keep the tool's name and its reason.
+### S2 — Retired: required tools and skills
+Earlier versions listed the tools and skills a subtree needs (`LSP`, Playwright MCP, a design-system skill, `security-review`, `frontend-design`, `claude-api`). A session already has every tool installed on the machine, and a skill runs when its own description matches the work. A mandate repeats that, makes a skill run where it doesn't fit, and fails for anyone who hasn't installed it.
+- *Outdated looks like:* a *Required tools* or *Required skills* section.
+- *Fix:* remove it. A tool a step uses stays in that step, as Playwright MCP does in the verification workflow (S4). A line that is really a rule about the subtree's code ("check an option in the SDK's installed type definitions before writing a call to it") moves to the subtree's rules. In the finding, say that a general tool preference (use `LSP` instead of grep) belongs in the user's own `~/.claude/CLAUDE.md` if they want it, and that a project skill which doesn't trigger reliably needs a better description in the skill itself.
 
 ### S3 — Testing
-The actual test framework named and pinned (Vitest / Jest / xUnit / pytest / …); the commands given as the subtree's own scripts; and the forcing rule — *do not introduce a different test framework without updating the architecture doc* — wherever the subtree has a test runner of its own in its manifest.
-- *Why:* stops the agent from silently fragmenting the test stack, and from running a check in a way that skips its pre-steps.
-- *Outdated looks like:* a framework named but the forcing rule dropped, in a subtree with its own runner; a generic unfilled placeholder where the framework should be; **a bare tool call** (`tsc --noEmit`, `pytest`) where the manifest has a script for it — the script carries pre-steps such as a generated file, and the bare call skips them.
-- *Not a finding:* no forcing rule in a package that borrows its siblings' runner, e.g. a types package with no test dependency of its own.
+Only what a session can't learn from the manifest: what tests must never touch and the fakes that stand in for it; a check that has to run from elsewhere to catch breakage outside the subtree; a command as the subtree's own script where a bare call would skip its pre-steps.
+- *Why:* a session reads the framework and `npm test` from the manifest by itself. What it can't see is what makes a test run dangerous, or a check incomplete.
+- *Outdated looks like:* **lines that only restate the manifest** — the framework's name, a plain "run `npm test`", "do not introduce a different test framework"; remove them. **A bare tool call** (`tsc --noEmit`, `pytest`) where the manifest has a script for it — the script carries pre-steps such as a generated file, and the bare call skips them.
+- *Missing looks like:* test helpers that fake a real resource (an API client, a repo, a database, a mailer) with no line saying what tests must never touch. Fill it from the helpers.
 
 ### S4 — Verification workflow (UI subtrees only)
-For UI subtrees, the numbered Playwright-MCP pattern: start dev server → drive the changed feature in a real browser → check console + network for errors → only then report complete.
+For UI subtrees, the numbered Playwright-MCP pattern: start the dev server, on scratch data if the app otherwise uses real data → drive the changed feature in a real browser → check console + network for errors → only then report complete.
 - *Why:* a passing `tsc`/unit suite doesn't prove a UI change actually works.
 - *Missing looks like:* a UI subtree with no browser-driven verification step. (Backend/library subtrees don't need this — don't flag its absence there.)
+- *Outdated looks like:* a start step that runs the app on the user's real data when the app can be pointed at scratch data (an env var for the database path, a seed command).
 
-### S5 — Required skills
-Project-specific skill mandates (a design system, security review, naming conventions, …).
-- *Why:* chains the agent into project-specific discipline.
-- *Note:* this is genuinely optional — **zero required skills is a valid choice**, so absence is **not** a finding on its own. Only flag it if there's an obvious installed, clearly-relevant skill the subtree should be mandating (e.g. a `*-design-system` skill for a frontend subtree) — and even then, frame it as a suggestion, not a gap.
-- *Outdated looks like:* **a skill mandated for work it doesn't cover.** Check each mandated item against its entry in `references/subtree-skills.md`. The known case is `claude-api` required for a subtree built on the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk` / `claude-agent-sdk`, per the manifest or `docs/ARCHITECTURE.md`). That skill covers the Claude API and Managed Agents and says it does not generate Agent SDK code. Replace the line with what the catalog's *Claude Agent SDK subtrees* entry requires. A subtree that also calls the Claude API directly (`anthropic` / `@anthropic-ai/sdk`) keeps `claude-api`, scoped to that code. The other known case is **`frontend-design` mandated for a UI whose look is already fixed** by mockups or a design system — the skill pushes toward a visual direction of its own; drop it.
+### S5 — Retired: merged into S2
 
 ### S6 — Only what `ARCHITECTURE.md` doesn't say
-The subtree file holds tools, commands, test conventions and checks — not rules `docs/ARCHITECTURE.md` already states.
+The subtree file holds commands, test conventions, checks and rules about its own code — not rules `docs/ARCHITECTURE.md` already states.
 - *Why:* every session loads `ARCHITECTURE.md`, so a rule copied from it is a second copy, and one of the two drifts.
-- *Outdated looks like:* **a rule that only restates `ARCHITECTURE.md`**, often marked "from `docs/ARCHITECTURE.md`". Remove it — unless it adds an action or a location the doc doesn't give ("moves are decided in `board/moves.ts`"), or a code comment cites it: grep the code for the subtree file's path before removing anything, and keep what a comment points at. List each removed rule in the finding.
+- *Outdated looks like:* **a rule that only restates `ARCHITECTURE.md`**, often marked "from `docs/ARCHITECTURE.md`". Remove it — unless it adds an action or a location the doc doesn't give ("retries are decided in `queue/retry.ts`"), or a code comment cites it: grep the code for the subtree file's path before removing anything, and keep what a comment points at. List each removed rule in the finding.
 - *Suggestion, not a fix:* **a mechanical self-check written as steps** ("search your diff for `style=` and hex colors"). A test would enforce it for every session. Name it in the finding and in step 10's summary; the audit edits `CLAUDE.md` files only, so it doesn't write the test.
 
 ---
@@ -155,7 +152,7 @@ The subtree file holds tools, commands, test conventions and checks — not rule
 When the user picks a file to update, apply only its findings, and preserve everything else:
 
 - **Missing** → add the section, filled from the project the same way a fresh scaffold would (read the manifest / architecture doc for the real values; don't paste raw placeholders).
-- **Outdated** → rewrite that section to the current recommendation's intent and the template's length, but keep any project-specific wording and rules wrapped around it. Don't reword satisfied parts just to match the template. A **retired** section (R4, R6b, R7, R8, R9) is removed: a project-specific rule inside it moves to where it now belongs, and every sentence the project wrote that gets dropped is listed in the finding.
+- **Outdated** → rewrite that section to the current recommendation's intent and the template's length, but keep any project-specific wording and rules wrapped around it. Don't reword satisfied parts just to match the template. A **retired** section (R4, R6b, R7, R8, R9, S2) is removed: a project-specific rule inside it moves to where it now belongs, and every sentence the project wrote that gets dropped is listed in the finding.
 - **Stale** → fix it (update the pointer, fill the placeholder) or, for a deleted-subtree pointer, remove that one line.
 - **Write the current rule, not its history.** This rubric names retired sections and schemes so the audit can spot them. That history belongs in the finding shown to the user, never in the text written to the file (*Writing CLAUDE.md text* in `SKILL.md`): a file whose *Owed follow-ups* section was removed simply doesn't have one, with no sentence saying it went. A replacement for a cut-down section reads as though the section had always said it.
 - **Never delete** custom sections the template never had — forcing rules, naming conventions, deployment notes. They're the whole reason the update is surgical and not a regeneration.

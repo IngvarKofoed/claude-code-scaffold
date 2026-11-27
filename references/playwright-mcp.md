@@ -1,6 +1,6 @@
 # Playwright MCP: verify it's installed, offer to install it headless
 
-The scaffold skill mandates **Playwright MCP** browser tools for UI subtrees (step 5.3 "Required tools", and the verification workflow in `templates/CLAUDE-subtree.md`). A `CLAUDE.md` that tells the agent to "drive the feature in a real browser via Playwright MCP" is a dead letter if Playwright MCP isn't actually installed. So before writing that mandate, confirm it's there — and if it isn't, offer to install it.
+The scaffold skill writes a verification workflow for UI subtrees (step 5.3, and `templates/CLAUDE-subtree.md`) that drives the page with **Playwright MCP**. A `CLAUDE.md` that tells the agent to "drive the feature in a real browser via Playwright MCP" is a dead letter if Playwright MCP isn't actually installed. So before writing that step, confirm it's there — and if it isn't, offer to install it.
 
 Run the check **once per scaffold run**, not once per UI subtree.
 

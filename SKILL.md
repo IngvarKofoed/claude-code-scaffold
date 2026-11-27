@@ -46,7 +46,7 @@ Look in `docs/ARCHITECTURE.md` first — most architecture docs name the major s
 
 If ARCHITECTURE doesn't name subtrees, fall back to asking the user directly in one question. Typical examples: `src/backend`, `src/frontend`, `src/e2e`, `services/api`, `packages/cli`.
 
-A subtree warrants its own CLAUDE.md when the rules genuinely differ — different language, different tools, different test framework. A small single-language project may have none; that's fine, skip step 5 in that case.
+A subtree warrants its own CLAUDE.md when it has rules of its own — what its tests must never touch, a check that must run from elsewhere, a verification step. A small single-language project may have none; that's fine, skip step 5 in that case.
 
 ### 4. Partition target files, then write the ones that don't exist
 
@@ -79,30 +79,12 @@ For each subtree path from step 3 **whose `CLAUDE.md` doesn't exist yet** (exist
 
 2. **Read `templates/CLAUDE-subtree.md`** in this skill's folder.
 
-3. **Fill the easy slots directly from the project:**
-   - **Required tools** — at minimum, `LSP` for the subtree's primary language. For UI subtrees, mandate browser tools (Playwright MCP) — but first confirm Playwright MCP is actually installed and connecting; if it's missing, or only available headed (e.g. bundled by a plugin), offer to install it headless per `references/playwright-mcp.md`. Run that availability check once per run, not per subtree. Name each tool and why work in this subtree needs it, and leave out how to load it: the harness tells every session how to load a deferred tool, and which tools are deferred changes between Claude Code versions, so a written recipe misleads on any version where it doesn't hold.
-   - **Testing** — read the actual test framework from the package manifest (Vitest / Jest / xUnit / pytest / etc.) and pin it. Give the commands as the subtree's own scripts from that manifest (`npm test`, `npm run typecheck`, …), never a bare tool call such as `tsc --noEmit`: the script carries its pre-steps, and a bare call on a fresh checkout can fail where the script passes. Keep the "do not introduce a different test framework without updating the architecture doc" closing line wherever the subtree has a test runner of its own in its manifest — it's a forcing rule, not boilerplate. A package that borrows its siblings' runner leaves it out.
+3. **Fill the slots from the project:**
+   - **Testing** — only what a session can't learn from the manifest. Look at the test helpers (fakes, mocks, temp repos, a test database) and write what tests must never touch and what stands in for it. Add a check that has to run from elsewhere to catch breakage outside the subtree, such as a type check from the repo root for a package others import. Give a command as the subtree's own script where a bare tool call would skip its pre-steps (`npm run typecheck`, never `tsc --noEmit`). Leave out the framework's name and a plain `npm test`, and leave the section out when there's nothing of this kind.
    - **Scope line** — one sentence on what lives here. No folder list: the folder shows it, and a list goes stale or names folders that `ARCHITECTURE.md` plans but nobody has built. Name an entry point only where the folder doesn't make it obvious.
-   - **Leave out what `docs/ARCHITECTURE.md` already says.** Every session loads it, so a rule copied from it is a second copy that drifts. A subtree file holds tools, commands, test conventions and checks. Where a rule is a mechanical check a session would run by hand — search the diff for a forbidden pattern — name it in step 10's summary as a test worth adding; this skill doesn't write code.
-   - **Verification workflow** — include the 4-step Playwright MCP pattern (already in the template's catch-all section) for UI subtrees; skip it for backend/library subtrees where the test suite is the verification.
-
-4. **Fill "Required skills" via the dynamic suggestion flow:**
-
-   a. **Read the opinionated catalog** at `references/subtree-skills.md` in this skill's folder. It lists catalog items (skills, plugins, tools) with "when to mandate" hints.
-
-   b. **Inspect what's actually installed** in the current Claude Code environment:
-      - Parse the `available skills` block in the system context (it's there as a system-reminder during a session). Plugin-namespaced entries follow `plugin-name:skill-name`.
-      - Deferred tools are discoverable via `ToolSearch` queries.
-      - Optionally inspect `~/.claude/plugins/` or `.claude/plugins/` for plugin manifests.
-
-   c. **Build a candidate list per subtree** by combining:
-      - Catalog items whose "When to mandate" matches the subtree's nature.
-      - Installed items not in the catalog that look clearly relevant (e.g., a `*-design-system` skill for a frontend subtree).
-
-   d. **Ask the user, once per subtree:**
-      > For `<subtree-path>`, suggested: `A` (installed), `B` (installed), `C` (install required from plugin `<x>`). Pick which to include — reply `all`, `none`, or list a subset.
-
-   e. **Write the user's chosen items** into the Required skills section of that subtree's CLAUDE.md. Zero items is a valid answer — leave the section empty if the user picks `none`. Do not invent skill names that aren't installed and aren't in the catalog.
+   - **Leave out what `docs/ARCHITECTURE.md` already says.** Every session loads it, so a rule copied from it is a second copy that drifts. A subtree file holds commands, test conventions, checks and rules about its own code. Where a rule is a mechanical check a session would run by hand — search the diff for a forbidden pattern — name it in step 10's summary as a test worth adding; this skill doesn't write code.
+   - **No list of tools or skills.** A session already has every tool installed on the machine, and a skill runs when its own description matches the work. A mandate repeats that, makes a skill run where it doesn't fit, and fails for anyone who hasn't installed it. A tool appears only inside a step that uses it, as Playwright MCP does in the verification workflow.
+   - **Verification workflow** — include the 4-step Playwright MCP pattern (already in the template's catch-all section) for UI subtrees, with step 1 filled in: the dev script, and the scratch data to run it on if the app otherwise uses real data. Skip it for backend/library subtrees where the test suite is the verification. Before writing it, confirm Playwright MCP is actually installed and connecting; if it's missing, or only available headed (e.g. bundled by a plugin), offer to install it headless per `references/playwright-mcp.md`. Run that check once per run, not per subtree.
 
 If the subtree directory doesn't exist yet, create it.
 
@@ -110,7 +92,7 @@ If the subtree directory doesn't exist yet, create it.
 
 For every `CLAUDE.md` set aside in step 4 because it already existed, run an audit instead of overwriting. The point is to bring an older or hand-written file up to this skill's *current* recommendations without clobbering the project-specific content someone added.
 
-**a. Audit each file against the checklist.** Read `references/audit-checklist.md` in this skill's folder — it's the rubric (what every root and subtree `CLAUDE.md` should contain, the *why* behind each item, and what an outdated version looks like). For each existing file, classify every rubric item as **OK / Missing / Outdated / Stale**. Satisfied items aren't findings — only surface gaps. For existing subtree files you'll need the same stack/test-framework facts step 5 gathers (read the manifest + architecture doc) so you can judge S2, S3 and S6 fairly.
+**a. Audit each file against the checklist.** Read `references/audit-checklist.md` in this skill's folder — it's the rubric (what every root and subtree `CLAUDE.md` should contain, the *why* behind each item, and what an outdated version looks like). For each existing file, classify every rubric item as **OK / Missing / Outdated / Stale**. Satisfied items aren't findings — only surface gaps. For existing subtree files you'll need the same stack/test-framework facts step 5 gathers (read the manifest + architecture doc) so you can judge S3 and S6 fairly.
 
 One rubric item can't be judged from the files at all: R3's **old-layout check**, `test -f` on `docs/CHANGELOG.md`, `docs/CHANGELOG-archive.md` and `docs/CHANGELOG-DIGEST.md`. Run it once, here. The skill no longer converts an old layout: a hit is reported as one finding and the files are left exactly as they are.
 
@@ -195,13 +177,13 @@ Print a short summary listing:
 
 - Files created (scaffolded fresh), files updated (audited in step 6 and brought current), and files left alone (existing, no findings or not picked) — with paths.
 - Reminders:
-  - **Subtree CLAUDE.md tools, test framework, and verification workflow** were filled in from the project (package manifest + architecture). Required skills reflect the choices you made per subtree in step 5 — anything you didn't pick was left out. Skim and adjust.
+  - **Subtree CLAUDE.md testing lines and verification workflow** were filled in from the project (test helpers, package manifest, architecture). Skim and adjust.
   - **Mechanical checks worth turning into tests** — any rule step 5 or the audit found that asks a session to search for a pattern by hand, named with the subtree. A test enforces it for every session; a sentence only asks.
   - **If you installed or reconfigured Playwright MCP during this run** (`references/playwright-mcp.md`), restart Claude Code or reconnect via `/mcp` before relying on the UI verification workflow — the new `mcp__playwright__*` tools aren't loaded in the current session yet.
   - **Review happens once, at the commit — not after every edit.** Deliberately: a pass per prompt only ever sees its own turn's edits and costs more than it catches. When you ask the agent to commit and the working tree holds non-trivial changes, it asks first, with two options: **`/code-review high --fix`** (broad coverage, repairs applied to the working tree, recommended for the accumulated diff this gate usually sees) or **commit now**. The agent runs your choice itself. `/code-review` ships with the harness, so nothing has to be installed for the gate to work.
   - **What the gate does *not* defer** — tests, build, and each subtree's own verification workflow still run per change. Only the review waits for the commit, and the question is skipped for a trivial diff.
   - **The changelog read is two actions and no `@`-reference** — nothing can `@`-reference "the files of a folder". Before touching an area, the session lists the folder and greps it. Either can be skipped, and it fails quietly when it is — the grep especially, since nothing signals a decision you never thought to look for. That is the accepted cost of having no curated digest: such a file is one every change appends to and every compaction rewrites, which is the collision the per-entry folder exists to remove. If you want the read deterministic, a session-start hook is the way (`update-config`) — out of this skill's scope, so yours to add.
-  - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`. Add the required-skill mandate to the relevant subtree CLAUDE.md once the skill exists.
+  - For project-specific domain skills (a design system, security rules, naming conventions), use `/skill-creator`, and give the skill a description that names the work it's for. The description, not a line in `CLAUDE.md`, is what makes a session invoke it.
 
 Stop. Do not start building domain skills or expanding the docs — those are separate decisions for the user.
 

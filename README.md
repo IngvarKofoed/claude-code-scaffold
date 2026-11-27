@@ -40,7 +40,7 @@ On a repo that already has `CLAUDE.md` files, the same skill audits them instead
 
 - *"audit my CLAUDE.md files"*, *"are my CLAUDE.md up to date?"*, *"check my CLAUDE.md against the latest scaffold conventions"*, or *"update CLAUDE.md to the current conventions"*.
 
-It reads each existing `CLAUDE.md`, compares it to the rubric in `references/audit-checklist.md` (the source-of-truth docs, the changelog, the commit-time review gate, where commits land, per-subtree tools/testing/verification, and the sections earlier versions wrote and have since retired or shortened, …), lists per file what's **missing**, **outdated**, or **stale**, and asks which files to update. Updates are surgical — it adds, shortens or removes only the recommendation-driven sections and leaves your custom content untouched, showing a diff before writing. A run can scaffold the missing files and audit the existing ones at the same time.
+It reads each existing `CLAUDE.md`, compares it to the rubric in `references/audit-checklist.md` (the source-of-truth docs, the changelog, the commit-time review gate, where commits land, per-subtree testing and verification, and the sections earlier versions wrote and have since retired or shortened, …), lists per file what's **missing**, **outdated**, or **stale**, and asks which files to update. Updates are surgical — it adds, shortens or removes only the recommendation-driven sections and leaves your custom content untouched, showing a diff before writing. A run can scaffold the missing files and audit the existing ones at the same time.
 
 ## Update
 
@@ -62,7 +62,6 @@ git commit -m "Bump scaffold skill"
 - `SKILL.md` — the workflow Claude follows.
 - `templates/CLAUDE-root.md` — starter template for the repo-root `CLAUDE.md`.
 - `templates/CLAUDE-subtree.md` — starter template for per-subtree `CLAUDE.md`.
-- `references/subtree-skills.md` — opinionated catalog of skills/plugins/tools to mandate per subtree.
 - `references/app-versioning.md` — per-ecosystem git-describe versioning recipes for the optional versioning step (Node.js, .NET, Python, Go, Rust, JVM, containers).
 - `references/audit-checklist.md` — the rubric for auditing an existing `CLAUDE.md`: what each file should contain, why, what an outdated version looks like, and how to apply surgical updates.
 - `references/playwright-mcp.md` — for UI subtrees: how to verify Playwright MCP is installed and offer to install it headless (own user-scope server, `--headless`) if it isn't.
