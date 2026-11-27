@@ -3,7 +3,7 @@
 ## Testing
 
 <Leave the section out unless one of these applies:
-- What tests must never touch (a real API, a real database, a real repo, the user's own data) and the fake that stands in for it, naming its file. Example: "Tests never send real email: they use the fake mailer in `test/fakes.ts`."
+- One line for each real resource the code uses (an external API, a database, a repo, the user's own data): tests never touch it, and the fake or temp copy that stands in, naming its file. Example: "Tests never send real email: they use the fake mailer in `test/fakes.ts`."
 - A check the test script doesn't run, or one that must run from elsewhere to catch breakage outside this subtree. Example: "After changing a type here, run `npm run typecheck` at the repo root."
 - A script to use because the bare tool skips a pre-step: `npm run typecheck`, not `tsc --noEmit`.
 - A coverage rule the tests already follow. Example: "Every endpoint has a route test.">
