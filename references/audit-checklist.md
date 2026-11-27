@@ -113,12 +113,12 @@ Earlier versions carried a section saying the agent never writes to `TODO.md`.
 
 ## Subtree `CLAUDE.md` rubric
 
-Source of truth: `templates/CLAUDE-subtree.md`. Apply per subtree file.
+Source of truth: `templates/CLAUDE-subtree.md`. Apply per subtree file. Every line in the template's sections is judged by one test: would a session that has read `docs/ARCHITECTURE.md`, the manifest and the folder act differently without it? A line that fails is Outdated, and the fix removes it.
 
-### S1 — Scope
-A one-line description of what lives in the subtree, naming an entry point only where the folder doesn't make it obvious.
-- *Why:* orients the agent before it touches the subtree.
-- *Stale looks like:* unfilled `<placeholder>` text; **a contents list that doesn't match the folder** — it names folders that don't exist (often ones `ARCHITECTURE.md` plans but nobody has built) or misses ones that do. Drop the list: the folder shows what's there. An accurate list isn't a finding.
+### S1 — Retired: scope line
+Earlier versions opened each subtree file with a sentence on what lives there, sometimes a contents list. By the time the file loads, the session is reading the folder, and `ARCHITECTURE.md` describes it; a list also goes stale and names folders nobody has built.
+- *Outdated looks like:* a description sentence or a contents list under the title.
+- *Fix:* remove it. An entry point the folder doesn't make obvious moves into the rule that needs it, if one does.
 
 ### S2 — Retired: required tools and skills
 Earlier versions listed the tools and skills a subtree needs (`LSP`, Playwright MCP, a design-system skill, `security-review`, `frontend-design`, `claude-api`). A session already has every tool installed on the machine, and a skill runs when its own description matches the work. A mandate repeats that, makes a skill run where it doesn't fit, and fails for anyone who hasn't installed it.
@@ -126,24 +126,28 @@ Earlier versions listed the tools and skills a subtree needs (`LSP`, Playwright 
 - *Fix:* remove it. A tool a step uses stays in that step, as Playwright MCP does in the verification workflow (S4). A line that is really a rule about the subtree's code ("check an option in the SDK's installed type definitions before writing a call to it") moves to the subtree's rules. In the finding, say that a general tool preference (use `LSP` instead of grep) belongs in the user's own `~/.claude/CLAUDE.md` if they want it, and that a project skill which doesn't trigger reliably needs a better description in the skill itself.
 
 ### S3 — Testing
-Only what a session can't learn from the manifest: what tests must never touch and the fakes that stand in for it; a check that has to run from elsewhere to catch breakage outside the subtree; a command as the subtree's own script where a bare call would skip its pre-steps.
-- *Why:* a session reads the framework and `npm test` from the manifest by itself. What it can't see is what makes a test run dangerous, or a check incomplete.
-- *Outdated looks like:* **lines that only restate the manifest** — the framework's name, a plain "run `npm test`", "do not introduce a different test framework"; remove them. **A bare tool call** (`tsc --noEmit`, `pytest`) where the manifest has a script for it — the script carries pre-steps such as a generated file, and the bare call skips them.
+Four kinds of line only: what tests must never touch and the fake that stands in for it; a check the test script doesn't run, or one that must run from elsewhere to catch breakage outside the subtree; a script to use where the bare tool skips a pre-step; a coverage rule the tests already follow ("every endpoint has a route test").
+- *Why:* a session reads the framework, the test command and where tests live from the manifest and the folder. What it can't see is what makes a test run dangerous, or a check incomplete.
+- *Outdated looks like:* **lines a session sees by itself** — the framework's name, "tests sit next to the code", "run `npm test` before you report a change complete", "do not introduce a different test framework". Remove them; a check the test script doesn't run (a type check) survives as its own line. **A bare tool call** (`tsc --noEmit`, `pytest`) where the manifest has a script for it — the script carries pre-steps such as a generated file, and the bare call skips them.
 - *Missing looks like:* test helpers that fake a real resource (an API client, a repo, a database, a mailer) with no line saying what tests must never touch. Fill it from the helpers.
 
 ### S4 — Verification workflow (UI subtrees only)
-For UI subtrees, the numbered Playwright-MCP pattern: start the dev server, on scratch data if the app otherwise uses real data → drive the changed feature in a real browser → check console + network for errors → only then report complete.
-- *Why:* a passing `tsc`/unit suite doesn't prove a UI change actually works.
+Opens with "For a change to what the page shows or does, before you report it complete:", then: start the app with the exact command and the setting that points it at scratch data → drive the changed feature via Playwright MCP → check console + network for errors.
+- *Why:* a passing test suite doesn't prove a UI change works, and a check on the user's real data can damage it.
 - *Missing looks like:* a UI subtree with no browser-driven verification step. (Backend/library subtrees don't need this — don't flag its absence there.)
-- *Outdated looks like:* a start step that runs the app on the user's real data when the app can be pointed at scratch data (an env var for the database path, a seed command).
+- *Outdated looks like:* a start step on the user's real data when the app can be pointed at scratch data (an env var for the database path, a seed command); **"for every UI change"**, which read literally costs a browser run for a typo; a claim about the machine ("headless", "installed") that is false on another one.
 
 ### S5 — Retired: merged into S2
 
-### S6 — Only what `ARCHITECTURE.md` doesn't say
-The subtree file holds commands, test conventions, checks and rules about its own code — not rules `docs/ARCHITECTURE.md` already states.
-- *Why:* every session loads `ARCHITECTURE.md`, so a rule copied from it is a second copy, and one of the two drifts.
-- *Outdated looks like:* **a rule that only restates `ARCHITECTURE.md`**, often marked "from `docs/ARCHITECTURE.md`". Remove it — unless it adds an action or a location the doc doesn't give ("retries are decided in `queue/retry.ts`"), or a code comment cites it: grep the code for the subtree file's path before removing anything, and keep what a comment points at. List each removed rule in the finding.
+### S6 — Only what `ARCHITECTURE.md` and the tests don't already cover
+Rules about the subtree's code that the doc doesn't state and no test enforces.
+- *Why:* every session loads `ARCHITECTURE.md`, so a rule copied from it is a second copy, and one of the two drifts. A rule a test enforces fails the test run whether or not the session read it.
+- *Outdated looks like:* **a rule that only restates `ARCHITECTURE.md`**, often marked "from `docs/ARCHITECTURE.md`", including one about a file the doc already calls generated; **a rule a test or lint script already enforces** ("the lint config rejects inline styles"). Remove it — unless it adds an action or a location the doc doesn't give ("retries are decided in `queue/retry.ts`"), or a code comment cites it: grep the code for the subtree file's path before removing anything, and keep what a comment points at. List each removed rule in the finding.
 - *Suggestion, not a fix:* **a mechanical self-check written as steps** ("search your diff for `style=` and hex colors"). A test would enforce it for every session. Name it in the finding and in step 10's summary; the audit edits `CLAUDE.md` files only, so it doesn't write the test.
+
+### S7 — A file with nothing left
+- *Outdated looks like:* a subtree file in which no line survives once the other findings are applied, only its title.
+- *Fix:* delete the file, shown in the diff like any other change, and say in the finding that the subtree has no rules of its own.
 
 ---
 
@@ -152,7 +156,7 @@ The subtree file holds commands, test conventions, checks and rules about its ow
 When the user picks a file to update, apply only its findings, and preserve everything else:
 
 - **Missing** → add the section, filled from the project the same way a fresh scaffold would (read the manifest / architecture doc for the real values; don't paste raw placeholders).
-- **Outdated** → rewrite that section to the current recommendation's intent and the template's length, but keep any project-specific wording and rules wrapped around it. Don't reword satisfied parts just to match the template. A **retired** section (R4, R6b, R7, R8, R9, S2) is removed: a project-specific rule inside it moves to where it now belongs, and every sentence the project wrote that gets dropped is listed in the finding.
+- **Outdated** → rewrite that section to the current recommendation's intent and the template's length, but keep any project-specific wording and rules wrapped around it. Don't reword satisfied parts just to match the template. A **retired** section (R4, R6b, R7, R8, R9, S1, S2) is removed: a project-specific rule inside it moves to where it now belongs, and every sentence the project wrote that gets dropped is listed in the finding.
 - **Stale** → fix it (update the pointer, fill the placeholder) or, for a deleted-subtree pointer, remove that one line.
 - **Write the current rule, not its history.** This rubric names retired sections and schemes so the audit can spot them. That history belongs in the finding shown to the user, never in the text written to the file (*Writing CLAUDE.md text* in `SKILL.md`): a file whose *Owed follow-ups* section was removed simply doesn't have one, with no sentence saying it went. A replacement for a cut-down section reads as though the section had always said it.
 - **Never delete** custom sections the template never had — forcing rules, naming conventions, deployment notes. They're the whole reason the update is surgical and not a regeneration.

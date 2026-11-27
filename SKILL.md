@@ -42,11 +42,11 @@ If either is over ~600 lines, surface this and suggest splitting before continui
 
 ### 3. Identify subtrees
 
-Look in `docs/ARCHITECTURE.md` first — most architecture docs name the major subtrees in a "Project Structure" section (or equivalent: "Layout", "Repository structure", a folder tree, etc.). If you can extract subtree paths from there, present the list back to the user for confirmation: *"I see these subtrees in ARCHITECTURE.md: `src/backend`, `src/frontend`, `src/e2e`. Each gets a scoped CLAUDE.md. Anything to add or remove?"*
+Look in `docs/ARCHITECTURE.md` first — most architecture docs name the major subtrees in a "Project Structure" section (or equivalent: "Layout", "Repository structure", a folder tree, etc.). If you can extract subtree paths from there, present the list back to the user for confirmation: *"I see these subtrees in ARCHITECTURE.md: `src/backend`, `src/frontend`, `src/e2e`. Each gets a `CLAUDE.md` if it has rules of its own. Anything to add or remove?"*
 
 If ARCHITECTURE doesn't name subtrees, fall back to asking the user directly in one question. Typical examples: `src/backend`, `src/frontend`, `src/e2e`, `services/api`, `packages/cli`.
 
-A subtree warrants its own CLAUDE.md when it has rules of its own — what its tests must never touch, a check that must run from elsewhere, a verification step. A small single-language project may have none; that's fine, skip step 5 in that case.
+A subtree gets its own CLAUDE.md only when it has rules of its own: what its tests must never touch, a check that must run from elsewhere, a verification step, a rule about its code. Step 5 decides that per subtree, after testing each line. A small single-language project may have none; that's fine, skip step 5 in that case.
 
 ### 4. Partition target files, then write the ones that don't exist
 
@@ -79,14 +79,13 @@ For each subtree path from step 3 **whose `CLAUDE.md` doesn't exist yet** (exist
 
 2. **Read `templates/CLAUDE-subtree.md`** in this skill's folder.
 
-3. **Fill the slots from the project:**
-   - **Testing** — only what a session can't learn from the manifest. Look at the test helpers (fakes, mocks, temp repos, a test database) and write what tests must never touch and what stands in for it. Add a check that has to run from elsewhere to catch breakage outside the subtree, such as a type check from the repo root for a package others import. Give a command as the subtree's own script where a bare tool call would skip its pre-steps (`npm run typecheck`, never `tsc --noEmit`). Leave out the framework's name and a plain `npm test`, and leave the section out when there's nothing of this kind.
-   - **Scope line** — one sentence on what lives here. No folder list: the folder shows it, and a list goes stale or names folders that `ARCHITECTURE.md` plans but nobody has built. Name an entry point only where the folder doesn't make it obvious.
-   - **Leave out what `docs/ARCHITECTURE.md` already says.** Every session loads it, so a rule copied from it is a second copy that drifts. A subtree file holds commands, test conventions, checks and rules about its own code. Where a rule is a mechanical check a session would run by hand — search the diff for a forbidden pattern — name it in step 10's summary as a test worth adding; this skill doesn't write code.
+3. **Fill the template from the project:**
+   - **Testing** — read the test helpers (fakes, mocks, temp repos, a test database) and the manifest's scripts, and write only the four kinds of line the template names: what tests must never touch and the fake for it; a check the test script doesn't run, or one that must run from elsewhere (a type check, from the repo root for a package others import); a script to use where the bare tool skips a pre-step (`npm run typecheck`, never `tsc --noEmit`); a coverage rule the tests already follow.
+   - **Verification workflow** — UI subtrees only. Fill step 1 with the exact dev command, the setting that points it at scratch data (read the server's config for a database path or data directory), and what it opens without that setting. Before writing it, confirm Playwright MCP is actually installed and connecting; if it's missing, or only available headed (e.g. bundled by a plugin), offer to install it headless per `references/playwright-mcp.md`. Run that check once per run, not per subtree.
+   - **Rules** — rules about this subtree's code that `docs/ARCHITECTURE.md` doesn't state: an action or a location the doc doesn't give. Every session loads that doc, so a rule copied from it is a second copy that drifts.
    - **No list of tools or skills.** A session already has every tool installed on the machine, and a skill runs when its own description matches the work. A mandate repeats that, makes a skill run where it doesn't fit, and fails for anyone who hasn't installed it. A tool appears only inside a step that uses it, as Playwright MCP does in the verification workflow.
-   - **Verification workflow** — include the 4-step Playwright MCP pattern (already in the template's catch-all section) for UI subtrees, with step 1 filled in: the dev script, and the scratch data to run it on if the app otherwise uses real data. Skip it for backend/library subtrees where the test suite is the verification. Before writing it, confirm Playwright MCP is actually installed and connecting; if it's missing, or only available headed (e.g. bundled by a plugin), offer to install it headless per `references/playwright-mcp.md`. Run that check once per run, not per subtree.
 
-If the subtree directory doesn't exist yet, create it.
+4. **Test every line, then decide whether the file exists.** Keep a line only if a session that has read `docs/ARCHITECTURE.md`, the manifest and the folder would act differently without it; the template's closing instructions list what fails. Where a rule is a mechanical check no test enforces — search the diff for a forbidden pattern — leave it out and name it in step 10's summary as a test worth adding; this skill doesn't write code. Leave out a section with no surviving line. A subtree with no surviving line gets no file: name it in step 10's summary, so the user knows it was considered.
 
 ### 6. Audit existing `CLAUDE.md` files (if any)
 
@@ -177,7 +176,7 @@ Print a short summary listing:
 
 - Files created (scaffolded fresh), files updated (audited in step 6 and brought current), and files left alone (existing, no findings or not picked) — with paths.
 - Reminders:
-  - **Subtree CLAUDE.md testing lines and verification workflow** were filled in from the project (test helpers, package manifest, architecture). Skim and adjust.
+  - **Subtree CLAUDE.md files** hold only lines that passed step 5's test, filled in from the test helpers, the manifest and the architecture doc. List the subtrees that got no file because no line passed. Skim and adjust.
   - **Mechanical checks worth turning into tests** — any rule step 5 or the audit found that asks a session to search for a pattern by hand, named with the subtree. A test enforces it for every session; a sentence only asks.
   - **If you installed or reconfigured Playwright MCP during this run** (`references/playwright-mcp.md`), restart Claude Code or reconnect via `/mcp` before relying on the UI verification workflow — the new `mcp__playwright__*` tools aren't loaded in the current session yet.
   - **Review happens once, at the commit — not after every edit.** Deliberately: a pass per prompt only ever sees its own turn's edits and costs more than it catches. When you ask the agent to commit and the working tree holds non-trivial changes, it asks first, with two options: **`/code-review high --fix`** (broad coverage, repairs applied to the working tree, recommended for the accumulated diff this gate usually sees) or **commit now**. The agent runs your choice itself. `/code-review` ships with the harness, so nothing has to be installed for the gate to work.
@@ -189,7 +188,7 @@ Stop. Do not start building domain skills or expanding the docs — those are se
 
 ## Safety
 
-- Never overwrite an existing `CLAUDE.md` blind. An existing file goes through the audit pass (step 6): updates are surgical, shown as a diff, and applied only to files the user picks. Custom sections the template never had are never deleted.
+- Never overwrite an existing `CLAUDE.md` blind. An existing file goes through the audit pass (step 6): updates are surgical, shown as a diff, and applied only to files the user picks. Custom sections the template never had are never deleted. A subtree file is deleted only when the audit's updates leave no line in it (rubric S7), shown and confirmed like any other change.
 - Never modify `CONCEPT.md` or `ARCHITECTURE.md`.
 - Never modify, move or delete `docs/CHANGELOG.md`, `docs/CHANGELOG-archive.md` or `docs/CHANGELOG-DIGEST.md`. The skill no longer converts an old changelog layout; it reports one (step 6a, step 7).
 - Never create, edit, move or delete `docs/CLAUDE_TODO.md` or `TODO.md`. The skill has no convention for either any more, and removing a retired section about them from a `CLAUDE.md` (R8, R9) leaves the files themselves exactly as they are.
